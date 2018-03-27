@@ -19,6 +19,7 @@ Node* new_node(Node* parent, int** grid, int gridx, int gridy, int** pos) {
     node->gridy = gridy;
     node->terminal = 0;
     node->n_child = 0;
+    node->pointer = NULL;
     node->children = NULL;
 
     return node;
@@ -51,22 +52,24 @@ int** copy_grid(int** grid, int gridx, int gridy) {
 // This creates all the subsequent game positions for move made by player id
 int spawn_children(Node* parent, int id) {
     if (parent->terminal) return 0;
+    printf("helloqsadfa\n");
+    if (!parent) return 0;
 
     int* valid_moves;
     int n_validmoves;
     n_validmoves = get_validmoves(parent->grid, parent->gridx, parent->gridy,
             parent->pos, id, &valid_moves);
-    parent->n_child = n_validmoves;
     if(!valid_moves) {
         parent->terminal = 1;
         parent->children = NULL;
         return 0;
     }
+    parent->n_child = n_validmoves;
 
     int** new_grid;
     int** new_pos;
-    Node** children = malloc(n_validmoves*sizeof(Node*));
-    if(!children) {
+    parent->children = malloc(n_validmoves*sizeof(Node*));
+    if(!parent->children) {
         printf("Out of memory!\n");
         free(valid_moves);
         return -1;
@@ -75,15 +78,16 @@ int spawn_children(Node* parent, int id) {
         new_grid = copy_grid(parent->grid, parent->gridx, parent->gridy);
         new_pos = copy_grid(parent->pos, 2, 2);
         make_move(new_grid, parent->gridx, parent->gridy, new_pos, id, valid_moves[i]);
-        children[i] = new_node(parent, new_grid, parent->gridx, parent->gridy, new_pos);
+        parent->children[i] = new_node(parent, new_grid, parent->gridx, parent->gridy, new_pos);
     }
-    parent->children = children;
     free(valid_moves);
     return n_validmoves;
 }
 
 //Frees memory allocated to a node. Will recursively free memory allocated to
 // childs too, beware.
+// This function returns null because we will somethimes need to set a pointer
+// to NULL after freeing it.
 void free_node(Node* node) {
     if (!node) return;
 
@@ -91,8 +95,8 @@ void free_node(Node* node) {
         for (int i = 0; i<node->n_child; i++) {
             free_node(node->children[i]);
         }
+        free(node->children);
     }
-        
     for (int i = 0; i<node->gridx; i++) {
         free(node->grid[i]);
     }
@@ -101,6 +105,7 @@ void free_node(Node* node) {
         free(node->pos[i]);
     }
     free(node->pos);
+    if (node->pointer) *node->pointer = NULL;
     free(node);
 }
 
@@ -112,7 +117,8 @@ Tree* new_tree(Node* root) {
     }
     tree->depth = 1;
     tree->root = root;
-    tree->last_level = &root;
+    tree->last_level = malloc(sizeof(Node*));
+    tree->last_level[0] = root;
     tree->num_nodes = 1;
 
     return tree;
@@ -120,5 +126,6 @@ Tree* new_tree(Node* root) {
 
 void free_tree(Tree* tree) {
     free_node(tree->root);
+    free(tree->last_level);
     free(tree);
 }

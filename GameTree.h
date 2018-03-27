@@ -8,11 +8,13 @@
  * pos[0] is the position of p1 and pos[1] is the position of p2
  * We also want to reference children and parent
  * */
+// pointer is a workaround. It points to the pointer referencing this in last_level
 typedef struct Node {
     struct Node* parent;
     int** grid;
     int** pos;
     int gridx, gridy, terminal, n_child;
+    struct Node** pointer;
     struct Node** children;
 } Node;
 

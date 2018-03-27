@@ -38,24 +38,27 @@ void destroy_player(Player* player) {
 // Sets valid_moves to an array containing valid moves for player id
 // Does not directly use player as argument because it will be needed elsewhere
 // Have to check valid_moves after using this, it might be set to NULL
-// C'est vraiment cancérigène ma façon de faire, mais je ne sais pas si je peux faire mieux
 int get_validmoves(int** grid, int gridx, int gridy, int** pos,
         int id, int** valid_moves) {
     int moves[4] = {0};
     int num = 0;
-    if (pos[id][0]-1 >= 0 && !grid[pos[id][0]-1][pos[id][1]]) {
+    if (pos[id][0]-1 >= 0 && !grid[pos[id][0]-1][pos[id][1]]
+            && !(pos[id][0]-1 == pos[(id+1)&1][0] && pos[id][1] == pos[(id+1)&1][1])) {
         num++;
         moves[0] = 1;
     }
-    if (pos[id][1]+1 < gridy && !grid[pos[id][0]][pos[id][1]+1]) {
+    if (pos[id][1]+1 < gridy && !grid[pos[id][0]][pos[id][1]+1]
+            && !(pos[id][0] == pos[(id+1)&1][0] && pos[id][1]+1 == pos[(id+1)&1][1])) {
         num++;
         moves[1]=1;
     }
-    if (pos[id][0]+1 < gridx && !grid[pos[id][0]+1][pos[id][1]]) {
+    if (pos[id][0]+1 < gridx && !grid[pos[id][0]+1][pos[id][1]]
+            && !(pos[id][0]+1 == pos[(id+1)&1][0] && pos[id][1] == pos[(id+1)&1][1])) {
         num++;
         moves[2]=1;
     }
-    if (pos[id][1]-1 >= 0 && !grid[pos[id][0]][pos[id][1]-1]) {
+    if (pos[id][1]-1 >= 0 && !grid[pos[id][0]][pos[id][1]-1]
+            && !(pos[id][0] == pos[(id+1)&1][0] && pos[id][1]-1 == pos[(id+1)&1][1])) {
         num++;
         moves[3]=1;
     }
@@ -79,7 +82,6 @@ int get_validmoves(int** grid, int gridx, int gridy, int** pos,
 }
 
 // Develops the next level of the game tree of player.
-// C'est affreux
 void expand_tree(Player* player) {
     // We evaluate which player plays on next level of tree
     player->tree->depth++;
@@ -87,72 +89,97 @@ void expand_tree(Player* player) {
 
     int total_num = 0;
     int num_elem;
+
     Node*** last_level = malloc(player->tree->num_nodes * sizeof(Node**));
     if (!last_level) {
         printf("Out of memory!\n");
         player->tree->depth--;
         return;
     }
+
     for (int i = 0; i<player->tree->num_nodes; i++) {
         num_elem = spawn_children(player->tree->last_level[i], to_move);
-        printf("num_elem : %d\n", num_elem);
+        if (!num_elem) {
+            last_level[i] = NULL;
+            continue;
+        }
+
+        last_level[i] = player->tree->last_level[i]->children;
+        /*
         last_level[i] = malloc(num_elem * sizeof(Node*));
         if (!last_level) {
             printf("Out of memory!\n");
+             free some stuff
             player->tree->depth--;
             return;
         }
         for (int j = 0; j<num_elem; j++) {
             last_level[i][j] = player->tree->last_level[i]->children[j];
         }
+        */
         total_num += num_elem;
     }
     Node** last = malloc(total_num * sizeof(Node*));
+    //player->tree->last_level = realloc(player->tree->last_level, total_num * sizeof(Node*));
+    if (!player->tree->last_level) {
+        printf("Out of memory!\n");
+        /* free some stuff*/
+        player->tree->depth--;
+        return;
+    }
+
     int total = 0;
-    printf("num_nodes : %d, n_child : \n", player->tree->num_nodes);
+
     for (int i = 0; i<player->tree->num_nodes; i++) {
+        if(!last_level[i]) continue;
         for (int j = 0; j<(player->tree->last_level[i])->n_child; j++) {
-            //printf("%d, %d\n",i,j);
             last[total] = last_level[i][j];
             total++;
         }
+        //free(last_level[i]);
     }
+    free(last_level);
 
     player->tree->num_nodes = total_num;
     free(player->tree->last_level);
     player->tree->last_level = last;
+    for (int i = 0; i< total_num; i++) {
+        player->tree->last_level[i]->pointer = player->tree->last_level+i;
+    }
 }
 
 // Cuts useless branches of tree and updates root.
-// Updates the tree on level at a time (this has to be used after we select our
+// Updates the tree one level at a time (this has to be used after we select our
 // move, and once more when we receive the move of opponent)
-// Has to update last_level and i'm bored
+// Does not update last_level of tree, but expand tree takes care of the possible
+// NULL pointers
 void update_tree(Player* player, int move, int id) {
     Node* root = player->tree->root;
     int pos[2];
     if (move=0) {
-        pos[0] = root->pos[id][0]--;
+        pos[0] = root->pos[id][0] - 1;
         pos[1] = root->pos[id][1];
     } else if (move=1) {
         pos[0] = root->pos[id][0];
-        pos[1] = root->pos[id][1]++;
+        pos[1] = root->pos[id][1] + 1;
     } else if (move=2) {
-        pos[0] = root->pos[id][0]++;
+        pos[0] = root->pos[id][0] + 1;
         pos[1] = root->pos[id][1];
     } else if (move=3) {
         pos[0] = root->pos[id][0];
-        pos[1] = root->pos[id][1]--;
+        pos[1] = root->pos[id][1] - 1;
     }
     for (int i = 0; i<root->n_child; i++) {
-        if ((root->children)[i]->pos[id][0] == pos[0] 
-                && (root->children)[i]->pos[id][1] == pos[1]) {
+        if (root->children[i]->pos[id][0] == pos[0] 
+                && root->children[i]->pos[id][1] == pos[1]) {
             player->tree->root = root->children[i];
             root->children[i] = NULL;
             free_node(root);
-            break;
+            player->tree->depth--;
+            return;
         }
     }
-    player->tree->depth--;
+    // DO SOMETHING BECAUSE MOVE MADE BY ID IS NOT ON NEXT LEVEL OF TREE
 }
 
 int next_randommove(Player* player) {
