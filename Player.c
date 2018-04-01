@@ -7,7 +7,7 @@
 // This function assumes grid and pos are taken from a player that's just been
 // initialized. Therefore, we assume it will all work.
 Player* init_player(int** grid, int gridx, int gridy, int** pos, int id,
-        int (*nextMove)()) {
+        int last1, int last2, double (*node_value)(Node*)) {
     Player* player = malloc(sizeof(Player));
     if(!player) {
         printf("Out of memory or something like that.\n");
@@ -15,7 +15,7 @@ Player* init_player(int** grid, int gridx, int gridy, int** pos, int id,
     }
     // Creating game tree
     Node* treeroot = new_node(NULL, copy_grid(grid, gridx, gridy),
-            gridx, gridy, copy_grid(pos, 2, 2));
+            gridx, gridy, copy_grid(pos, 2, 2), last1, last2);
     player->tree = new_tree(treeroot);
 
     player->pos = pos;
@@ -23,7 +23,9 @@ Player* init_player(int** grid, int gridx, int gridy, int** pos, int id,
     player->grid = grid;
     player->gridx = gridx;
     player->gridy = gridy;
-    player->nextMove = nextMove;
+    player->last1 = last1;
+    player->last2 = last2;
+    player->node_value = node_value;
     player->lost = 0;
 
     return player;
@@ -63,9 +65,11 @@ int get_validmoves(int** grid, int gridx, int gridy, int** pos,
         moves[3]=1;
     }
     if(!num) {
-        valid_moves = NULL;
+        *valid_moves = NULL;
+        printf("There are no valid moves\n");
         return 0;
     }
+    //int availmoves[num];
     *valid_moves = malloc(num*sizeof(int));
     if(!*valid_moves) {
         printf("Out of memory.\n");
@@ -74,10 +78,12 @@ int get_validmoves(int** grid, int gridx, int gridy, int** pos,
     int count = 0;
     for (int i = 0; i<4; i++) {
         if (moves[i]) {
+            //availmoves[count] = i;
             (*valid_moves)[count] = i;
             count++;
         }
     }
+    //*valid_moves = availmoves;
     return num;
 }
 
@@ -86,7 +92,6 @@ void expand_tree(Player* player) {
     // We evaluate which player plays on next level of tree
     player->tree->depth++;
     int to_move = (player->tree->depth + player->id) % 2;
-
     int total_num = 0;
     int num_elem;
 
@@ -98,6 +103,10 @@ void expand_tree(Player* player) {
     }
 
     for (int i = 0; i<player->tree->num_nodes; i++) {
+        if (!player->tree->last_level[i]) {
+            last_level[i] = NULL;
+            continue;
+        }
         num_elem = spawn_children(player->tree->last_level[i], to_move);
         if (!num_elem) {
             last_level[i] = NULL;
@@ -121,7 +130,7 @@ void expand_tree(Player* player) {
     }
     Node** last = malloc(total_num * sizeof(Node*));
     //player->tree->last_level = realloc(player->tree->last_level, total_num * sizeof(Node*));
-    if (!player->tree->last_level) {
+    if (!last) {
         printf("Out of memory!\n");
         /* free some stuff*/
         player->tree->depth--;
@@ -132,13 +141,22 @@ void expand_tree(Player* player) {
 
     for (int i = 0; i<player->tree->num_nodes; i++) {
         if(!last_level[i]) continue;
-        for (int j = 0; j<(player->tree->last_level[i])->n_child; j++) {
+        for (int j = 0; j<player->tree->last_level[i]->n_child; j++) {
             last[total] = last_level[i][j];
             total++;
         }
         //free(last_level[i]);
     }
     free(last_level);
+
+    /* Les quatres prochaines lignes n'ont rien d'impressionnantes, mais il m'a
+     * fallu 4 heures pour trouver qu'elles étaient nécessaire à ce que 
+     * l'exécution se déroule comme voulue.
+     * */
+    for (int i = 0; i<player->tree->num_nodes; i++) {
+        if (player->tree->last_level[i]) 
+        player->tree->last_level[i]->pointer = NULL;
+    }
 
     player->tree->num_nodes = total_num;
     free(player->tree->last_level);
@@ -155,21 +173,25 @@ void expand_tree(Player* player) {
 // NULL pointers
 void update_tree(Player* player, int move, int id) {
     Node* root = player->tree->root;
+    if (!root->n_child) {
+        printf("Tree root has no child!\n");
+        return;
+    }
     int pos[2];
-    if (move=0) {
+    if (move==0) {
         pos[0] = root->pos[id][0] - 1;
         pos[1] = root->pos[id][1];
-    } else if (move=1) {
+    } else if (move==1) {
         pos[0] = root->pos[id][0];
         pos[1] = root->pos[id][1] + 1;
-    } else if (move=2) {
+    } else if (move==2) {
         pos[0] = root->pos[id][0] + 1;
         pos[1] = root->pos[id][1];
-    } else if (move=3) {
+    } else if (move==3) {
         pos[0] = root->pos[id][0];
         pos[1] = root->pos[id][1] - 1;
     }
-    for (int i = 0; i<root->n_child; i++) {
+    for (int i = 0; i<3; i++) {
         if (root->children[i]->pos[id][0] == pos[0] 
                 && root->children[i]->pos[id][1] == pos[1]) {
             player->tree->root = root->children[i];
@@ -179,12 +201,57 @@ void update_tree(Player* player, int move, int id) {
             return;
         }
     }
-    // DO SOMETHING BECAUSE MOVE MADE BY ID IS NOT ON NEXT LEVEL OF TREE
+    printf("This move does not exists.\n");
 }
 
-int next_randommove(Player* player) {
-    struct timespec start, current;
-    clock_gettime(CLOCK_REALTIME, &start);
+// Explore tree and apply player->nextmove on terminal nodes
+// This is minimax
+void evaluate_node(Node* node, Player* player, int minmax) {
+    if (node->n_child) {
+        for (int i = 0; i< node->n_child; i++) {
+            if (node->children[i]->value == -100.0)
+                evaluate_node(node->children[i], player, (minmax+1)&1);
+        }
+        if (minmax) node->value = max(node->children, node->n_child);
+        else node->value = min(node->children, node->n_child);
+        return;
+    }
+    // Because node_value is a loss function for p1
+    if(node->value == -100.0) {
+        if (player->id) node->value = - player->node_value(node);
+        else node->value = player->node_value(node);
+    }
+}
+
+// This is not super efficient
+int next_move(Player* player) {
+    int next_move[3];
+    Node* root = player->tree->root;
+    int num_moves = 0;
+    for (int i = 0; i<root->n_child; i++) {
+        if (root->children[i]->value == root->value) {
+            if (player->id) {
+                next_move[num_moves] = root->children[i]->last2;
+                num_moves++;
+            } else {
+                 next_move[num_moves] = root->children[i]->last1;
+                 num_moves++;
+            }
+        }
+    }
+    return next_move[rand() % num_moves];
+    printf("It did not work\n");
+    return -1;
+}
+
+double randommove(Node* node) {
+    if (node->terminal) {
+        int loser = game_loser(node->grid, node->gridx, node->gridy, node->pos);
+        if (loser == 2) return 0.0;
+        if (loser == 1) return -1.0;
+        if (loser == 0) return 1.0;
+    }
+    return 0.0;
 }
 
 // Returns the time elapsed since start at time current in nanoseconds.

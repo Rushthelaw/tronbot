@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include "Game.h"
 #include "Player.h"
 #include "GameTree.h"
@@ -92,6 +93,7 @@ Game* init_game(int gridx, int gridy, int** grid, int p1[2], int p2[2]) {
 
 // Frees allocated memory when creating a Game
 void destroy_game(Game* game) {
+    if (!game) return;
     if (game->p1) destroy_player(game->p1);
     if (game->p2) destroy_player(game->p2);
     for (int i = 0; i<game->gridx; i++) {
@@ -103,6 +105,39 @@ void destroy_game(Game* game) {
     }
     free(game->pos);
     free(game);
+}
+
+void play_game(Game* game){
+    Player* p1 = game->p1;
+    Player* p2 = game->p2;
+    int last1, last2;
+    // This bugs
+    //
+    Tree* tree = game->p1->tree;
+    while (!(game->p1lost || game->p2lost)) {
+
+        for (int i = 0; i<2; i++) {
+            expand_tree(p1);
+            expand_tree(p2);
+        }
+        evaluate_node(p1->tree->root, p1, 0);
+        evaluate_node(p2->tree->root, p2, 0);
+        last1 = next_move(p1);
+        last2 = next_move(p2);
+        p1->last1 = last1;
+        p2->last1 = last1;
+        p1->last2 = last2;
+        p2->last2 = last2;
+        make_moves(game, last1, last2);
+        //print_grid(game->grid, game->gridx, game->gridy, game->pos);
+        //sleep(1);
+
+        update_tree(p1, last1, 0);
+        update_tree(p2, last2, 1);
+        update_tree(p1, last2, 1);
+        update_tree(p2, last1, 0);
+    }
+    printf("Game Over!\n");
 }
 
 // Prints the grid.
@@ -135,15 +170,16 @@ void print_grid(int** grid, int gridx, int gridy, int** pos) {
 }
 
 // Don't know if this has any use.
-void add_players(Game* game, int (*movep1)(), int (*movep2)()) {
-    game->p1 = init_player(game->grid, game->gridx, game->gridy, game->pos, 0,
-            movep1);
+// d1 and d2 are the initial directions
+void add_players(Game* game, int d1, int d2, double (*movep1)(), double (*movep2)()) {
+    game->p1 = init_player(game->grid, game->gridx, game->gridy, game->pos, 0, 
+            d1, d2, movep1);
     if(!game->p1) {
         printf("Could not create p1.\n");
         return;
     }
     game->p2 = init_player(game->grid, game->gridx, game->gridy, game->pos, 1,
-            movep2);
+            d1, d2, movep2);
     if(!game->p2) {
         printf("Could not create p2.\n");
         return;
@@ -205,6 +241,48 @@ int make_move(int** grid, int gridx, int gridy, int** pos, int id, int move) {
         if (pos[id][1]<0) return 1;
     }
     return 0;
+}
+
+// Checks if game specified by the parameters is over
+int game_over(int** grid, int gridx, int gridy, int** pos) {
+    if(pos[0][0] < 0
+            || pos[0][1] < 0
+            || pos[0][0] >= gridx
+            || pos[0][1] >= gridy
+            || pos[1][0] < 0
+            || pos[1][1] < 0
+            || pos[1][0] >= gridx
+            || pos[1][1] >= gridy
+            || (pos[0][0] == pos[1][0] && pos[0][1] == pos[1][1])
+            || grid[pos[0][0]][pos[0][1]]
+            || grid[pos[1][0]][pos[1][1]]) {
+        return 1;
+    }
+    return 0;
+}
+
+// Returns 0 if p1 lost, 1 if p2 lost and 2 of both lost
+// This assumes the game is over. This will return a valid value even if it is
+// not.
+int game_loser(int** grid, int gridx, int gridy, int** pos) {
+    if (pos[0][0] < 0
+            || pos[0][1] < 0
+            || pos[0][0] >= gridx
+            || pos[0][1] >= gridy
+            || grid[pos[0][0]][pos[0][1]]) {
+        if (pos[1][0] < 0
+                || pos[1][1] < 0
+                || pos[1][0] >= gridx
+                || pos[1][1] >= gridy
+                || grid[pos[1][0]][pos[1][1]]) return 2;
+        return 0;
+    }
+    if (pos[1][0] < 0
+            || pos[1][1] < 0
+            || pos[1][0] >= gridx
+            || pos[1][1] >= gridy
+            || grid[pos[1][0]][pos[1][1]]) return 1;
+    return 2;
 }
 
 // Probably wont need this.

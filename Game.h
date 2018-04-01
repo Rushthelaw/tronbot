@@ -25,12 +25,18 @@ Game* init_game(int gridx, int gridy, int** grid, int* p1, int* p2);
 
 void destroy_game(Game* game);
 
+void play_game(Game* game);
+
 void print_grid(int** grid, int gridx, int gridy, int** pos);
 
-void add_players(Game* game, int (*movep1)(), int (*movep2)());
+void add_players(Game* game,int d1, int d2, double (*movep1)(), double (*movep2)());
 
 void make_moves(Game* game, int m1, int m2);
 
 int make_move(int** grid, int gridx, int gridy, int** pos, int id, int move);
+
+int game_over(int** grid, int gridx, int gridy, int** pos);
+
+int game_loser(int** grid, int gridx, int gridy, int** pos);
 
 #endif

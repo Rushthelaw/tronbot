@@ -7,20 +7,27 @@
  * We want node to contain a game configuration
  * pos[0] is the position of p1 and pos[1] is the position of p2
  * We also want to reference children and parent
+ * last1 is the last move of p1, last2 is the last move of p2
  * */
 // pointer is a workaround. It points to the pointer referencing this in last_level
 typedef struct Node {
     struct Node* parent;
     int** grid;
     int** pos;
-    int gridx, gridy, terminal, n_child;
+    int gridx, gridy, terminal, n_child, last1, last2;
+    double value;
     struct Node** pointer;
     struct Node** children;
 } Node;
 
-Node* new_node(Node* parent, int** grid, int gridx, int gridy, int** pos);
+Node* new_node(Node* parent, int** grid, int gridx, int gridy, int** pos,
+        int last1, int last2);
 
 int** copy_grid(int** grid, int gridx, int gridy);
+
+double min(Node** nodes, int n_nodes);
+
+double max(Node** nodes, int n_nodes);
 
 int spawn_children(Node* parent, int id);
 

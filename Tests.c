@@ -5,14 +5,14 @@
 #include "Player.h"
 
 int main(void) {
-    int p1[2] = {1,1};
-    int p2[2] = {0,0};
+    int p1[2] = {5,5};
+    int p2[2] = {1,1};
 
     int num;
     int* moves;
 
-    Game* game = init_game(3, 4, NULL, p1, p2);
-    add_players(game, next_randommove, next_randommove);
+    Game* game = init_game(7, 7, NULL, p1, p2);
+    add_players(game, 1, 1, randommove, randommove);
 
     print_grid(game->grid, game->gridx, game->gridy, game->pos);
     print_grid(game->p1->grid, game->p1->gridx, game->p1->gridy, game->p1->pos);
@@ -21,12 +21,12 @@ int main(void) {
     for (int i = 0; i<num; i++) {
         printf("M%d : %d\n", i, moves[i]);
     }
-    free(moves);
+    //free(moves);
     num = get_validmoves(game->grid, game->gridx, game->gridy, game->pos, 1, &moves);
     for (int i = 0; i<num; i++) {
         printf("M%d : %d\n", i, moves[i]);
     }
-    free(moves);
+    //free(moves);
 
     // Testing expand_tree
     expand_tree(game->p1);
@@ -37,6 +37,7 @@ int main(void) {
     //spawn_children(game->p2->tree->root, 1);
 
     // printing trees
+    printf("after 2 expand\n");
     printf("P1 tree\n");
     Tree* tree = game->p1->tree;
     for (int i = 0; i<tree->num_nodes; i++) {
@@ -59,6 +60,7 @@ int main(void) {
 
     //testing update tree
     update_tree(game->p1,1,0);
+    printf("after 1 update\n");
     printf("P1 tree\n");
     tree = game->p1->tree;
     for (int i = 0; i<tree->num_nodes; i++) {
@@ -68,11 +70,133 @@ int main(void) {
     }
     update_tree(game->p1,1,1);
     update_tree(game->p2,1,1);
+    printf("P2 tree\n");
+    tree = game->p2->tree;
+    for (int i = 0; i<tree->num_nodes; i++) {
+        if (!tree->last_level[i]) continue;
+        printf("i: %d\n", i);
+        print_grid(tree->last_level[i]->grid, game->gridx, game->gridy, tree->last_level[i]->pos);
+    }
     update_tree(game->p2,1,0);
+    printf("after 2 updates\n");
     printf("P1 tree\n");
     tree = game->p1->tree;
     for (int i = 0; i<tree->num_nodes; i++) {
-        if (!tree->last_level) continue;
+        if (!tree->last_level[i]) continue;
+        printf("i: %d\n", i);
+        print_grid(tree->last_level[i]->grid, game->gridx, game->gridy, tree->last_level[i]->pos);
+    }
+    printf("P2 tree\n");
+    tree = game->p2->tree;
+    for (int i = 0; i<tree->num_nodes; i++) {
+        if (!tree->last_level[i]) continue;
+        printf("i: %d\n", i);
+        print_grid(tree->last_level[i]->grid, game->gridx, game->gridy, tree->last_level[i]->pos);
+    }
+    // Testing expand_tree after update_tree
+    expand_tree(game->p1);
+    expand_tree(game->p2);
+    expand_tree(game->p1);
+    expand_tree(game->p2);
+    printf("after 2 more expand\n");
+    printf("P1 tree\n");
+    tree = game->p1->tree;
+    for (int i = 0; i<tree->num_nodes; i++) {
+        if (!tree->last_level[i]) continue;
+        printf("i: %d\n", i);
+        print_grid(tree->last_level[i]->grid, game->gridx, game->gridy, tree->last_level[i]->pos);
+    }
+    printf("P2 tree\n");
+    tree = game->p2->tree;
+    for (int i = 0; i<tree->num_nodes; i++) {
+        if (!tree->last_level[i]) continue;
+        printf("i: %d\n", i);
+        print_grid(tree->last_level[i]->grid, game->gridx, game->gridy, tree->last_level[i]->pos);
+    }
+    make_moves(game, 0, 1);
+    print_grid(game->grid, game->gridx, game->gridy, game->pos);
+    //testing update tree
+    update_tree(game->p1,0,0);
+    printf("after 1 update\n");
+    printf("P1 tree\n");
+    tree = game->p1->tree;
+    for (int i = 0; i<tree->num_nodes; i++) {
+        if (!tree->last_level[i]) continue;
+        printf("i: %d\n", i);
+        print_grid(tree->last_level[i]->grid, game->gridx, game->gridy, tree->last_level[i]->pos);
+    }
+    update_tree(game->p1,1,1);
+    update_tree(game->p2,1,1);
+    printf("P2 tree\n");
+    tree = game->p2->tree;
+    for (int i = 0; i<tree->num_nodes; i++) {
+        if (!tree->last_level[i]) continue;
+        printf("i: %d\n", i);
+        print_grid(tree->last_level[i]->grid, game->gridx, game->gridy, tree->last_level[i]->pos);
+    }
+    update_tree(game->p2,0,0);
+    printf("after 2 updates\n");
+    printf("P1 tree\n");
+    tree = game->p1->tree;
+    for (int i = 0; i<tree->num_nodes; i++) {
+        if (!tree->last_level[i]) continue;
+        printf("i: %d\n", i);
+        print_grid(tree->last_level[i]->grid, game->gridx, game->gridy, tree->last_level[i]->pos);
+    }
+    printf("P2 tree\n");
+    tree = game->p2->tree;
+    for (int i = 0; i<tree->num_nodes; i++) {
+        if (!tree->last_level[i]) continue;
+        printf("i: %d\n", i);
+        print_grid(tree->last_level[i]->grid, game->gridx, game->gridy, tree->last_level[i]->pos);
+    }
+    // Testing expand_tree after update_tree
+    expand_tree(game->p1);
+    expand_tree(game->p2);
+    expand_tree(game->p1);
+    expand_tree(game->p2);
+    printf("after 2 more expand\n");
+    printf("P1 tree\n");
+    tree = game->p1->tree;
+    for (int i = 0; i<tree->num_nodes; i++) {
+        if (!tree->last_level[i]) continue;
+        printf("i: %d\n", i);
+        print_grid(tree->last_level[i]->grid, game->gridx, game->gridy, tree->last_level[i]->pos);
+    }
+    printf("P2 tree\n");
+    tree = game->p2->tree;
+    for (int i = 0; i<tree->num_nodes; i++) {
+        if (!tree->last_level[i]) continue;
+        printf("i: %d\n", i);
+        print_grid(tree->last_level[i]->grid, game->gridx, game->gridy, tree->last_level[i]->pos);
+    }
+    make_moves(game, 0, 1);
+    print_grid(game->grid, game->gridx, game->gridy, game->pos);
+    //testing update tree
+    update_tree(game->p1,0,0);
+    printf("after 1 update\n");
+    printf("P1 tree\n");
+    tree = game->p1->tree;
+    for (int i = 0; i<tree->num_nodes; i++) {
+        if (!tree->last_level[i]) continue;
+        printf("i: %d\n", i);
+        print_grid(tree->last_level[i]->grid, game->gridx, game->gridy, tree->last_level[i]->pos);
+    }
+    update_tree(game->p1,1,1);
+    update_tree(game->p2,1,1);
+    printf("P2 tree\n");
+    tree = game->p2->tree;
+    for (int i = 0; i<tree->num_nodes; i++) {
+        if (!tree->last_level[i]) continue;
+        printf("i: %d\n", i);
+        print_grid(tree->last_level[i]->grid, game->gridx, game->gridy, tree->last_level[i]->pos);
+    }
+    update_tree(game->p2,0,0);
+    printf("after 2 updates\n");
+    printf("P1 tree\n");
+    tree = game->p1->tree;
+    for (int i = 0; i<tree->num_nodes; i++) {
+        if (!tree->last_level[i]) continue;
         printf("i: %d\n", i);
         print_grid(tree->last_level[i]->grid, game->gridx, game->gridy, tree->last_level[i]->pos);
     }
@@ -84,18 +208,17 @@ int main(void) {
         print_grid(tree->last_level[i]->grid, game->gridx, game->gridy, tree->last_level[i]->pos);
     }
 
-    num = get_validmoves(game->grid, game->gridx, game->gridy, game->pos, 0, &moves);
-    for (int i = 0; i<num; i++) {
-        printf("M%d : %d\n", i, moves[i]);
-    }
-    free(moves);
-    num = get_validmoves(game->grid, game->gridx, game->gridy, game->pos, 1, &moves);
-    for (int i = 0; i<num; i++) {
-        printf("M%d : %d\n", i, moves[i]);
-    }
-    free(moves);
-
     destroy_game(game);
+    for (int i = 0; i<10000; i++) {
+        p1[0] = p1[1] = 7;
+        p2[0] = p2[1] = 2;
+        game = init_game(10, 10, NULL, p1, p2);
+        add_players(game, 3, 1, randommove, randommove);
+        //print_grid(game->grid, game->gridx, game->gridy, game->pos);
+        play_game(game);
+        destroy_game(game);
+        printf("i : %d\n", i);
+    }
     printf("Ended correctly\n");
 }
 
@@ -103,7 +226,7 @@ int main(void) {
 
 void update_tree(Player* player, int move, int id);
 
-int next_randommove(Player* player);
+int randommove(Player* player);
 
 long elapsed_time(const struct timespec* start, const struct timespec* current);
 

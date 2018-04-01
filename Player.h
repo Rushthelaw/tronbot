@@ -21,18 +21,20 @@
  * gridx and gridy are the grid dimensions. Needed to compute possible moves
  * id is the player id (0 for p1 and 1 for p2), can be used to indice pos
  * pos are the x and y coordinates of the players on grid
- * gametree contains the previous calculations made (will probably somewhat of a doublylinked list)
+ * tree contains the previous calculations made (will probably somewhat of a doublylinked list)
+ * last_move is the current direction of player (you can't go back)
  * */
+/* node_value can't return the value -100.0 as of now*/
 typedef struct {
-    int lost, gridx, gridy, id;
+    int lost, gridx, gridy, id, last1, last2;
     Tree* tree;
     int** grid;
     int** pos;
-    int (*nextMove)();
+    double (*node_value)(Node*);
 } Player;
 
 Player* init_player(int** grid, int gridx, int gridy, int** pos, int id,
-        int (*nextMove)());
+        int last1, int last2, double (*node_value)(Node*));
 
 void destroy_player(Player* player);
 
@@ -43,7 +45,11 @@ void expand_tree(Player* player);
 
 void update_tree(Player* player, int move, int id);
 
-int next_randommove(Player* player);
+void evaluate_node(Node* node, Player* player, int minmax);
+
+int next_move(Player* player);
+
+double randommove(Node* node);
 
 long elapsed_time(const struct timespec* start, const struct timespec* current);
 

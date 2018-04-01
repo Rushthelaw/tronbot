@@ -5,7 +5,8 @@
 #include "GameTree.h"
 
 // I won't perform non-critical tests here because they will use precious time
-Node* new_node(Node* parent, int** grid, int gridx, int gridy, int** pos) {
+Node* new_node(Node* parent, int** grid, int gridx, int gridy, int** pos,
+        int last1, int last2) {
     Node* node = malloc(sizeof(Node));
     if(!node) {
         printf("Out of memory or something like that.\n");
@@ -13,14 +14,18 @@ Node* new_node(Node* parent, int** grid, int gridx, int gridy, int** pos) {
     }
 
     node->parent = parent;
-    node->grid = grid;
-    node->pos = pos;
+    node->grid = copy_grid(grid, gridx, gridy);
+    node->pos = copy_grid(pos,2,2);
     node->gridx = gridx;
     node->gridy = gridy;
-    node->terminal = 0;
+    //node->terminal = 0;
+    node->terminal = game_over(grid, gridx, gridy, pos);
     node->n_child = 0;
     node->pointer = NULL;
     node->children = NULL;
+    node->last1 = last1;
+    node->last2 = last2;
+    node->value = -100.0;
 
     return node;
 }
@@ -49,12 +54,65 @@ int** copy_grid(int** grid, int gridx, int gridy) {
     return copy;
 }
 
-// This creates all the subsequent game positions for move made by player id
-int spawn_children(Node* parent, int id) {
-    if (parent->terminal) return 0;
-    printf("helloqsadfa\n");
-    if (!parent) return 0;
+// This assume nodes have been evaluated
+// Right now, those just return min and max value, but i might need to add some
+// stuff to allow me to find the next node without having to look
+double min(Node** nodes, int n_nodes) {
+    double min = nodes[0]->value;
+    for (int i = 1; i<n_nodes; i++) {
+        if (nodes[i]->value < min) min = nodes[i]->value;
+    }
+    return min;
+}
 
+// This assume nodes have been evaluated
+double max(Node** nodes, int n_nodes) {
+    double max = nodes[0]->value;
+    for (int i = 1; i<n_nodes; i++) {
+        if (nodes[i]->value > max) max = nodes[i]->value;
+    }
+    return max;
+}
+
+// This creates all the subsequent game positions for move made by player id
+// Note that this does generate impossible positions
+int spawn_children(Node* parent, int id) {
+    if (!parent) return 0;
+    // we won't spawn children of an over game
+    if (parent->terminal) return 0;
+
+    parent->n_child = 3;
+    int** new_grid;
+    int** new_pos;
+    parent->children = malloc(3 * sizeof(Node*));
+    if(!parent->children) {
+        printf("Out of memory!\n");
+        return -1;
+    }
+    int count = 0;
+    if(id) {
+        for (int i = 0; i<4; i++) {
+            if ((parent->last2+2)%4 == i) continue;
+            new_grid = copy_grid(parent->grid, parent->gridx, parent->gridy);
+            new_pos = copy_grid(parent->pos, 2, 2);
+            make_move(new_grid, parent->gridx, parent->gridy, new_pos, id, i);
+            parent->children[count] = new_node(parent, new_grid, parent->gridx,
+                    parent->gridy, new_pos, parent->last1, i);
+            count++;
+        }
+    } else {
+        for (int i = 0; i<4; i++) {
+            if ((parent->last1+2)%4 == i) continue;
+            new_grid = copy_grid(parent->grid, parent->gridx, parent->gridy);
+            new_pos = copy_grid(parent->pos, 2, 2);
+            make_move(new_grid, parent->gridx, parent->gridy, new_pos, id, i);
+            parent->children[count] = new_node(parent, new_grid, parent->gridx,
+                    parent->gridy, new_pos, i, parent->last2);
+            count++;
+        }
+    }
+    return 3;
+    /*
     int* valid_moves;
     int n_validmoves;
     n_validmoves = get_validmoves(parent->grid, parent->gridx, parent->gridy,
@@ -82,6 +140,7 @@ int spawn_children(Node* parent, int id) {
     }
     free(valid_moves);
     return n_validmoves;
+    */
 }
 
 //Frees memory allocated to a node. Will recursively free memory allocated to
@@ -97,14 +156,21 @@ void free_node(Node* node) {
         }
         free(node->children);
     }
-    for (int i = 0; i<node->gridx; i++) {
-        free(node->grid[i]);
+
+    if (node->grid) {
+        for (int i = 0; i<node->gridx; i++) {
+            free(node->grid[i]);
+        }
+        free(node->grid);
     }
-    free(node->grid);
-    for (int i = 0; i<2; i++) {
-        free(node->pos[i]);
+
+    if (node->pos) {
+        for (int i = 0; i<2; i++) {
+            free(node->pos[i]);
+        }
+        free(node->pos);
     }
-    free(node->pos);
+
     if (node->pointer) *node->pointer = NULL;
     free(node);
 }
@@ -125,6 +191,7 @@ Tree* new_tree(Node* root) {
 }
 
 void free_tree(Tree* tree) {
+    if (!tree) return;
     free_node(tree->root);
     free(tree->last_level);
     free(tree);
