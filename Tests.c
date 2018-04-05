@@ -17,15 +17,15 @@ int main(void) {
     print_grid(game->grid, game->gridx, game->gridy, game->pos);
     print_grid(game->p1->grid, game->p1->gridx, game->p1->gridy, game->p1->pos);
     // Testing getvalidmoves
-    num = get_validmoves(game->grid, game->gridx, game->gridy, game->pos, 0, &moves);
-    for (int i = 0; i<num; i++) {
-        printf("M%d : %d\n", i, moves[i]);
-    }
+    //num = get_validmoves(game->grid, game->gridx, game->gridy, game->pos, 0, &moves);
+    //for (int i = 0; i<num; i++) {
+    //    printf("M%d : %d\n", i, moves[i]);
+    //}
     //free(moves);
-    num = get_validmoves(game->grid, game->gridx, game->gridy, game->pos, 1, &moves);
-    for (int i = 0; i<num; i++) {
-        printf("M%d : %d\n", i, moves[i]);
-    }
+    //num = get_validmoves(game->grid, game->gridx, game->gridy, game->pos, 1, &moves);
+    //for (int i = 0; i<num; i++) {
+    //    printf("M%d : %d\n", i, moves[i]);
+    //}
     //free(moves);
 
     // Testing expand_tree
@@ -209,7 +209,7 @@ int main(void) {
     }
 
     destroy_game(game);
-    for (int i = 0; i<10000; i++) {
+    for (int i = 0; i<2; i++) {
         p1[0] = p1[1] = 7;
         p2[0] = p2[1] = 2;
         game = init_game(10, 10, NULL, p1, p2);
@@ -217,7 +217,6 @@ int main(void) {
         //print_grid(game->grid, game->gridx, game->gridy, game->pos);
         play_game(game);
         destroy_game(game);
-        printf("i : %d\n", i);
     }
     printf("Ended correctly\n");
 }

@@ -37,6 +37,7 @@ void destroy_player(Player* player) {
     free(player);
 }
 
+/* This is useless
 // Sets valid_moves to an array containing valid moves for player id
 // Does not directly use player as argument because it will be needed elsewhere
 // Have to check valid_moves after using this, it might be set to NULL
@@ -83,9 +84,10 @@ int get_validmoves(int** grid, int gridx, int gridy, int** pos,
             count++;
         }
     }
-    //*valid_moves = availmoves;
+    /valid_moves = availmoves;
     return num;
 }
+*/
 
 // Develops the next level of the game tree of player.
 void expand_tree(Player* player) {
@@ -114,22 +116,9 @@ void expand_tree(Player* player) {
         }
 
         last_level[i] = player->tree->last_level[i]->children;
-        /*
-        last_level[i] = malloc(num_elem * sizeof(Node*));
-        if (!last_level) {
-            printf("Out of memory!\n");
-             free some stuff
-            player->tree->depth--;
-            return;
-        }
-        for (int j = 0; j<num_elem; j++) {
-            last_level[i][j] = player->tree->last_level[i]->children[j];
-        }
-        */
         total_num += num_elem;
     }
     Node** last = malloc(total_num * sizeof(Node*));
-    //player->tree->last_level = realloc(player->tree->last_level, total_num * sizeof(Node*));
     if (!last) {
         printf("Out of memory!\n");
         /* free some stuff*/
@@ -145,7 +134,6 @@ void expand_tree(Player* player) {
             last[total] = last_level[i][j];
             total++;
         }
-        //free(last_level[i]);
     }
     free(last_level);
 
@@ -204,8 +192,8 @@ void update_tree(Player* player, int move, int id) {
     printf("This move does not exists.\n");
 }
 
-// Explore tree and apply player->nextmove on terminal nodes
-// This is minimax
+// Explore tree and apply player->node_value on terminal nodes
+// This is minimax minimizes if minmax=0, and maximizes otherwise
 void evaluate_node(Node* node, Player* player, int minmax) {
     if (node->n_child) {
         for (int i = 0; i< node->n_child; i++) {
@@ -223,13 +211,16 @@ void evaluate_node(Node* node, Player* player, int minmax) {
     }
 }
 
-// This is not super efficient
-int next_move(Player* player) {
+// This is not super efficient, but i don't feel this needs to be
+// Selects a move in the children of tree root that have an optimal value
+// If many moves are equal, this will be random between them.
+// This has no alpha-beta
+int choose_next(Player* player) {
     int next_move[3];
     Node* root = player->tree->root;
     int num_moves = 0;
     for (int i = 0; i<root->n_child; i++) {
-        if (root->children[i]->value == root->value) {
+        if (root->children[i]->value <= root->value) {
             if (player->id) {
                 next_move[num_moves] = root->children[i]->last2;
                 num_moves++;
@@ -239,11 +230,43 @@ int next_move(Player* player) {
             }
         }
     }
-    return next_move[rand() % num_moves];
-    printf("It did not work\n");
-    return -1;
+    if (num_moves) return next_move[rand() % num_moves];
+    else {
+        printf("No child, could not choose next.\n");
+        return -1;
+    }
 }
 
+// This is the time control for the execution of the calculations
+int compute_next(Player* player, int last_self, int last_op) {
+    struct timespec start, current;
+    clock_gettime(CLOCK_REALTIME, &start);
+    if(player->tree->depth>2) {
+        update_tree(player, last_self, player->id);
+        update_tree(player, last_op, (player->id+1)&1);
+        if(player->id) {
+            player->last1 = last_op;
+            player->last2 = last_self;
+        } else {
+            player->last1 = last_self;
+            player->last2 = last_op;
+        }
+    }
+    while(player->tree->depth<7) {
+        expand_tree(player);
+    }
+    evaluate_node(player->tree->root, player, 0);
+    clock_gettime(CLOCK_REALTIME, &current);
+    while(elapsed_time(&start, &current)<TTPLAY && player->tree->depth<3) {
+        expand_tree(player);
+        evaluate_node(player->tree->root, player, 0);
+        clock_gettime(CLOCK_REALTIME, &current);
+    }
+    printf("Time taken : %f\n", elapsed_time(&start, &current)/1000000000.0);
+    return choose_next(player);
+}
+
+// Always return 0. Every move that is not endgame is equal.
 double randommove(Node* node) {
     if (node->terminal) {
         int loser = game_loser(node->grid, node->gridx, node->gridy, node->pos);
