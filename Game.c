@@ -33,7 +33,7 @@ Game* init_game(int gridx, int gridy, int** grid, int p1[2], int p2[2]) {
     }
     game->gridx = gridx;
     game->gridy = gridy;
-    game->isOver = 0;
+    game->is_over = 0;
     game->p1lost = 0;
     game->p2lost = 0;
 
@@ -116,16 +116,17 @@ void play_game(Game* game){
     int last1, last2, temp;
 
     Tree* tree = game->p1->tree;
-    while (!(game->p1lost || game->p2lost)) {
-        printf("Choosing moves\n");
+    while (!(game->is_over)) {
+        //printf("Choosing moves\n");
         temp = compute_next(p1, last1, last2);
         last2 = compute_next(p2, last2, last1);
         last1 = temp;
-        printf("Moves choosen\n");
+        //printf("Moves choosen\n");
         make_moves(game, last1, last2);
-        print_grid(game->grid, game->gridx, game->gridy, game->pos);
+        //print_grid(game->grid, game->gridx, game->gridy, game->pos);
+        //sleep(1);
     }
-    printf("Game Over!\n");
+    //printf("Game Over!\n");
 }
 
 // Prints the grid.
@@ -176,31 +177,31 @@ void add_players(Game* game, int d1, int d2, double (*movep1)(), double (*movep2
 // Possible moves are 0 (go left), 1 (go up), 2 (go right) and 3 (go down)
 // Checks if game is over
 void make_moves(Game* game, int m1, int m2) {
-    if (game->isOver) {
+    if (game->is_over) {
         printf("Game is over, no need to make moves!\n");
     }
     
     if(m1>3 || m1<0 || make_move(game->grid,
                 game->gridx, game->gridy, game->pos, 0, m1)) {
-        game->isOver = 1;
+        game->is_over = 1;
         game->p1lost = 1;
     } else if (game->grid[game->pos[0][0]][game->pos[0][1]] == 1) {
-        game->isOver = 1;
+        game->is_over = 1;
         game->p1lost = 1;
     }
     if(m2>3 || m2<0 || make_move(game->grid,
                 game->gridx, game->gridy, game->pos, 1, m2)) {
-        game->isOver = 1;
+        game->is_over = 1;
         game->p2lost = 1;
         return;
     } else if (game->grid[game->pos[1][0]][game->pos[1][1]] == 1) {
-        game->isOver = 1;
+        game->is_over = 1;
         game->p2lost = 1;
         return;
     }
     if ((game->pos[0][0] == game->pos[1][0]) 
             && (game->pos[0][1] == game->pos[1][1])) {
-        game->isOver = 1;
+        game->is_over = 1;
         game->p1lost = 1;
         game->p2lost = 1;
     }

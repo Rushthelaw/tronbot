@@ -15,5 +15,5 @@ tests: $(DEPS) $(HEADERS) Tests.c
 	$(CC) $(FLAGS) Tests.c $(DEPS) -o Tests
 
 maketests: $(DEPS) $(HEADERS) Tests.c
-	$(CC) $(FLAGS) Tests.c $(DEPS) -o Tests
-	./Tests
+	$(CC) $(FLAGS) -g Tests.c $(DEPS) -o Tests
+	valgrind --log-file=valgrind.txt ./Tests

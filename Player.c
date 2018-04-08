@@ -121,7 +121,7 @@ void expand_tree(Player* player) {
     Node** last = malloc(total_num * sizeof(Node*));
     if (!last) {
         printf("Out of memory!\n");
-        /* free some stuff*/
+        free(last_level);
         player->tree->depth--;
         return;
     }
@@ -162,7 +162,7 @@ void expand_tree(Player* player) {
 void update_tree(Player* player, int move, int id) {
     Node* root = player->tree->root;
     if (!root->n_child) {
-        printf("Tree root has no child!\n");
+        //printf("Tree root has no child!\n");
         return;
     }
     int pos[2];
@@ -189,7 +189,7 @@ void update_tree(Player* player, int move, int id) {
             return;
         }
     }
-    printf("This move does not exists.\n");
+    //printf("This move does not exists.\n");
 }
 
 // Explore tree and apply player->node_value on terminal nodes
@@ -232,7 +232,7 @@ int choose_next(Player* player) {
     }
     if (num_moves) return next_move[rand() % num_moves];
     else {
-        printf("No child, could not choose next.\n");
+        //printf("No child, could not choose next.\n");
         return -1;
     }
 }
@@ -262,7 +262,7 @@ int compute_next(Player* player, int last_self, int last_op) {
         evaluate_node(player->tree->root, player, 0);
         clock_gettime(CLOCK_REALTIME, &current);
     }
-    printf("Time taken : %f\n", elapsed_time(&start, &current)/1000000000.0);
+    //printf("Time taken : %f\n", elapsed_time(&start, &current)/1000000000.0);
     return choose_next(player);
 }
 
@@ -275,6 +275,275 @@ double randommove(Node* node) {
         if (loser == 0) return 1.0;
     }
     return 0.0;
+}
+
+// Returns difference between number of "controlled squares for p1 and p2
+double voronoi_dist(Node* node) {
+    if (node->terminal) {
+        int loser = game_loser(node->grid, node->gridx, node->gridy, node->pos);
+        if (loser == 2) return 0.0;
+        if (loser == 1) return -(double)(node->gridx*node->gridy);
+        if (loser == 0) return (double)(node->gridx*node->gridy);
+    }
+    double score = 0.0;
+    for (int i = 0; i<node->gridx; i++) {
+        for (int j = 0; j<node->gridy; j++) {
+            score -= controller(i, j, node->grid, node->gridx, node->gridy, node->pos);
+        }
+    }
+    return score;
+}
+
+// Returns the controller of the space (i,j) in grid (closest player)
+// 1.0 is p1, -1.0 is p2, 0.0 means both are or the space is inacessible.
+// Uses dijkstra.
+// This would probably be easier with a dynamic queue.
+double controller(int i, int j, int** grid, int gridx, int gridy, int** pos) {
+    if (grid[i][j]) return 0.0;
+    if ((pos[0][0] == i && pos[0][1] == j)
+            || (pos[1][0] == i && pos[1][1] == j)) return 0.0;
+    int distance[gridx][gridy];
+    for (int k = 0; k<gridx; k++) {
+        for (int l = 0; l<gridy; l++) {
+            distance[k][l] = gridx + gridy + 10;
+        }
+    }
+    int dist, list, p1, p2, l1l, l2l;
+    dist = p1 = p2 = l2l = 0;
+    list = 1;
+    // These will act as open.
+    int** list1 = malloc(gridx * gridy * sizeof(int*));
+    if (!list1) {
+        printf("Out of memory.\n");
+        return 0.0;
+    }
+    int** list2 = malloc(gridx * gridy * sizeof(int*));
+    if (!list2) {
+        free(list1);
+        printf("Out of memory.\n");
+        return 0.0;
+    }
+
+    int* position = malloc(2 * sizeof(int));
+    if (!position) {
+        printf("Out of memory.\n");
+        free(list1);
+        free(list2);
+        return 0.0;
+    }
+    position[0] = i;
+    position[1] = j;
+    list1[0] = position;
+    l1l = 1;
+    while (!p1 && !p2) {
+        //printf("hello\n");
+        if (list) {
+            //printf("1 %d %d\n", l1l, l2l);
+            for (int k = 0; k<l1l; k++) {
+                if (grid[list1[k][0]][list1[k][1]]) {
+                    free(list1[k]);
+                    continue;
+                }
+                if (list1[k][0] == pos[0][0] && list1[k][1] == pos[0][1])
+                    p1 += 1;
+                else if (list1[k][0] == pos[1][0] && list1[k][1] == pos[1][1])
+                    p2 += 1;
+                if (p1 || p2) {
+                    free(list1[k]);
+                    continue;
+                }
+
+                if (distance[list1[k][0]][list1[k][1]] > dist) {
+                    distance[list1[k][0]][list1[k][1]] = dist;
+                    for (int l = 0; l<4; l++) {
+                        if (l == 0) {
+                            if (list1[k][0] - 1 >= 0) {
+                                position = malloc(2*sizeof(int));
+                                if (!position) {
+                                    printf("Out of memory.\n");
+                                    for (int m = k; m<l1l; m++) free(list1[m]);
+                                    free(list1);
+                                    free(list2);
+                                    return 0.0;
+                                }
+                                position[0] = list1[k][0]-1;
+                                position[1] = list1[k][1];
+                                list2[l2l] = position;
+                                l2l++;
+                            }
+                        }
+                        else if (l == 1) {
+                            if (list1[k][1] + 1 < gridy) {
+                                position = malloc(2*sizeof(int));
+                                if (!position) {
+                                    printf("Out of memory.\n");
+                                    for (int m = k; m<l1l; m++) free(list1[m]);
+                                    free(list1);
+                                    free(list2);
+                                    return 0.0;
+                                }
+                                position[0] = list1[k][0];
+                                position[1] = list1[k][1]+1;
+                                list2[l2l] = position;
+                                l2l++;
+                            }
+                        }
+                        else if (l == 2) {
+                            if (list1[k][0] + 1 < gridx) {
+                                position = malloc(2*sizeof(int));
+                                if (!position) {
+                                    printf("Out of memory.\n");
+                                    for (int m = k; m<l1l; m++) free(list1[m]);
+                                    free(list1);
+                                    free(list2);
+                                    return 0.0;
+                                }
+                                position[0] = list1[k][0]+1;
+                                position[1] = list1[k][1];
+                                list2[l2l] = position;
+                                l2l++;
+                            }
+                        }
+                        else if (l == 3) {
+                            if (list1[k][1] - 1 >= 0) {
+                                position = malloc(2*sizeof(int));
+                                if (!position) {
+                                    printf("Out of memory.\n");
+                                    for (int m = k; m<l1l; m++) free(list1[m]);
+                                    free(list1);
+                                    free(list2);
+                                    return 0.0;
+                                }
+                                position[0] = list1[k][0];
+                                position[1] = list1[k][1]-1;
+                                list2[l2l] = position;
+                                l2l++;
+                            }
+                        }
+                    }
+                }
+                free(list1[k]);
+            }
+            //printf("concluded\n");
+            l1l = 0;
+            dist++;
+            list = (list+1)&1;
+        } else {
+            //printf("2 %d %d\n", l1l, l2l);
+            for (int k = 0; k<l2l; k++) {
+                if (grid[list2[k][0]][list2[k][1]]) {
+                    free(list2[k]);
+                    continue;
+                }
+
+                if (list2[k][0] == pos[0][0] && list2[k][1] == pos[0][1])
+                    p1 += 1;
+                if (list2[k][0] == pos[1][0] && list2[k][1] == pos[1][1])
+                    p2 += 1;
+                if (p1 || p2) {
+                    free(list2[k]);
+                    continue;
+                }
+
+                if (distance[list2[k][0]][list2[k][1]] > dist) {
+                    distance[list2[k][0]][list2[k][1]] = dist;
+                    for (int l = 0; l<4; l++) {
+                        if (l == 0) {
+                            if (list2[k][0] - 1 >= 0) {
+                                position = malloc(2*sizeof(int));
+                                if (!position) {
+                                    printf("Out of memory.\n");
+                                    for (int m = k; m<l2l; m++) free(list2[m]);
+                                    free(list1);
+                                    free(list2);
+                                    return 0.0;
+                                }
+                                position[0] = list2[k][0]-1;
+                                position[1] = list2[k][1];
+                                list1[l1l] = position;
+                                l1l++;
+                            }
+                        }
+                        else if (l == 1) {
+                            if (list2[k][1] + 1 < gridy) {
+                                position = malloc(2*sizeof(int));
+                                if (!position) {
+                                    printf("Out of memory.\n");
+                                    for (int m = k; m<l2l; m++) free(list2[m]);
+                                    free(list1);
+                                    free(list2);
+                                    return 0.0;
+                                }
+                                position[0] = list2[k][0];
+                                position[1] = list2[k][1]+1;
+                                list1[l1l] = position;
+                                l1l++;
+                            }
+                        }
+                        else if (l == 2) {
+                            if (list2[k][0] + 1 < gridx) {
+                                position = malloc(2*sizeof(int));
+                                if (!position) {
+                                    printf("Out of memory.\n");
+                                    for (int m = k; m<l2l; m++) free(list2[m]);
+                                    free(list1);
+                                    free(list2);
+                                    return 0.0;
+                                }
+                                position[0] = list2[k][0]+1;
+                                position[1] = list2[k][1];
+                                list1[l1l] = position;
+                                l1l++;
+                            }
+                        }
+                        else if (l == 3) {
+                            if (list2[k][1] - 1 >= 0) {
+                                position = malloc(2*sizeof(int));
+                                if (!position) {
+                                    printf("Out of memory.\n");
+                                    for (int m = k; m<l2l; m++) free(list2[m]);
+                                    free(list1);
+                                    free(list2);
+                                    return 0.0;
+                                }
+                                position[0] = list2[k][0];
+                                position[1] = list2[k][1]-1;
+                                list1[l1l] = position;
+                                l1l++;
+                            }
+                        }
+                    }
+                }
+                free(list2[k]);
+            }
+            l2l = 0;
+            dist++;
+            list = (list+1)&1;
+            //printf("concluded\n");
+        }
+        if (l1l == l2l) {
+            //printf("ended\n");
+            free(list1);
+            free(list2);
+            return 0.0;
+        }
+    }
+    if (l1l) {
+        for (int k = 0; k<l1l; k++) {
+            free(list1[k]);
+        }
+    }
+    if (l2l) {
+        for (int k = 0; k<l2l; k++) {
+            free(list2[k]);
+        }
+    }
+    free(list1);
+    free(list2);
+    //printf("ended\n");
+    if (p1 && p2) return 0.0;
+    else if (p1) return 1.0;
+    else if (p2) return -1.0;
 }
 
 // Returns the time elapsed since start at time current in nanoseconds.

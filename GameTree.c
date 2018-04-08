@@ -14,8 +14,8 @@ Node* new_node(Node* parent, int** grid, int gridx, int gridy, int** pos,
     }
 
     node->parent = parent;
-    node->grid = copy_grid(grid, gridx, gridy);
-    node->pos = copy_grid(pos,2,2);
+    node->grid = grid;
+    node->pos = pos;
     node->gridx = gridx;
     node->gridy = gridy;
     node->terminal = game_over(grid, gridx, gridy, pos);
@@ -148,7 +148,7 @@ void free_node(Node* node) {
 }
 
 Tree* new_tree(Node* root) {
-    Tree* tree = malloc(sizeof(tree));
+    Tree* tree = malloc(sizeof(Tree));
     if(!tree) {
         printf("Out of memory or something like that.\n");
         return NULL;

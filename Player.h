@@ -53,6 +53,10 @@ int compute_next(Player* player, int last_self, int last_op);
 
 double randommove(Node* node);
 
+double voronoi_dist(Node* node);
+
+double controller(int i, int j, int** grid, int gridx, int gridy, int** pos);
+
 long elapsed_time(const struct timespec* start, const struct timespec* current);
 
 #endif

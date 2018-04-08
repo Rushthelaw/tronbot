@@ -2,8 +2,6 @@
 //Declaration of the game structure and the game logic functions
 #ifndef GAME_H_INCLUDED
 #define GAME_H_INCLUDED
-/* To implement : - add_player (method to create a player from game)
- * */
 
 /* gridx is the x size of the grid
  * gridy is the y size of the grid
@@ -14,7 +12,7 @@
  * pos contains the players positions
  * */
 typedef struct {
-    int gridx, gridy, isOver, p1lost, p2lost;
+    int gridx, gridy, is_over, p1lost, p2lost;
     Player* p1;
     Player* p2;
     int** grid;
