@@ -33,7 +33,7 @@ Game* init_game(int gridx, int gridy, int** grid, int p1[2], int p2[2]) {
     }
     game->gridx = gridx;
     game->gridy = gridy;
-    game->isOver = 0;
+    game->is_over = 0;
     game->p1lost = 0;
     game->p2lost = 0;
 
@@ -107,46 +107,33 @@ void destroy_game(Game* game) {
     free(game);
 }
 
+// This plays game until the end
+// This needs to be redone because i will change Player API to consider the time
+// limit
 void play_game(Game* game){
     Player* p1 = game->p1;
     Player* p2 = game->p2;
-    int last1, last2;
-    // This bugs
-    //
-    Tree* tree = game->p1->tree;
-    while (!(game->p1lost || game->p2lost)) {
+    int last1, last2, temp;
 
-        for (int i = 0; i<2; i++) {
-            expand_tree(p1);
-            expand_tree(p2);
-        }
-        evaluate_node(p1->tree->root, p1, 0);
-        evaluate_node(p2->tree->root, p2, 0);
-        last1 = next_move(p1);
-        last2 = next_move(p2);
-        p1->last1 = last1;
-        p2->last1 = last1;
-        p1->last2 = last2;
-        p2->last2 = last2;
+    Tree* tree = game->p1->tree;
+    while (!(game->is_over)) {
+        //printf("Choosing moves\n");
+        temp = compute_next(p1, last1, last2);
+        last2 = compute_next(p2, last2, last1);
+        last1 = temp;
+        //printf("Moves choosen\n");
         make_moves(game, last1, last2);
         //print_grid(game->grid, game->gridx, game->gridy, game->pos);
         //sleep(1);
-
-        update_tree(p1, last1, 0);
-        update_tree(p2, last2, 1);
-        update_tree(p1, last2, 1);
-        update_tree(p2, last1, 0);
     }
-    printf("Game Over!\n");
+    //printf("Game Over!\n");
 }
 
 // Prints the grid.
 // This does not check if the game is over, it might not work as intended if it is
 // Bottom left corner is x = y = 0, x is horizontal, y is vertical
-// This should be enough since I have no intention for the game to be playable
+// This is solely for debugging, I have no intention for the game to be playable
 void print_grid(int** grid, int gridx, int gridy, int** pos) {
-    //if (game->p1lost) printf("p1 is died.\n");
-    //if (game->p2lost) printf("p2 is died.\n");
     for (int j = gridy-1; j>=0; j--) {
         for (int i = 0; i<gridx; i++) {
             if (pos[0][0]==i && pos[0][1]==j) {
@@ -169,7 +156,7 @@ void print_grid(int** grid, int gridx, int gridy, int** pos) {
     printf("\n");
 }
 
-// Don't know if this has any use.
+// Creates players for game.
 // d1 and d2 are the initial directions
 void add_players(Game* game, int d1, int d2, double (*movep1)(), double (*movep2)()) {
     game->p1 = init_player(game->grid, game->gridx, game->gridy, game->pos, 0, 
@@ -190,31 +177,31 @@ void add_players(Game* game, int d1, int d2, double (*movep1)(), double (*movep2
 // Possible moves are 0 (go left), 1 (go up), 2 (go right) and 3 (go down)
 // Checks if game is over
 void make_moves(Game* game, int m1, int m2) {
-    if (game->isOver) {
+    if (game->is_over) {
         printf("Game is over, no need to make moves!\n");
     }
     
     if(m1>3 || m1<0 || make_move(game->grid,
                 game->gridx, game->gridy, game->pos, 0, m1)) {
-        game->isOver = 1;
+        game->is_over = 1;
         game->p1lost = 1;
     } else if (game->grid[game->pos[0][0]][game->pos[0][1]] == 1) {
-        game->isOver = 1;
+        game->is_over = 1;
         game->p1lost = 1;
     }
     if(m2>3 || m2<0 || make_move(game->grid,
                 game->gridx, game->gridy, game->pos, 1, m2)) {
-        game->isOver = 1;
+        game->is_over = 1;
         game->p2lost = 1;
         return;
     } else if (game->grid[game->pos[1][0]][game->pos[1][1]] == 1) {
-        game->isOver = 1;
+        game->is_over = 1;
         game->p2lost = 1;
         return;
     }
     if ((game->pos[0][0] == game->pos[1][0]) 
             && (game->pos[0][1] == game->pos[1][1])) {
-        game->isOver = 1;
+        game->is_over = 1;
         game->p1lost = 1;
         game->p2lost = 1;
     }
@@ -242,6 +229,12 @@ int make_move(int** grid, int gridx, int gridy, int** pos, int id, int move) {
     }
     return 0;
 }
+
+/* These two functions should be merged into 1
+ * Dependant functions :
+ * - new_node
+ * - randommove
+ * */
 
 // Checks if game specified by the parameters is over
 int game_over(int** grid, int gridx, int gridy, int** pos) {
@@ -284,6 +277,3 @@ int game_loser(int** grid, int gridx, int gridy, int** pos) {
             || grid[pos[1][0]][pos[1][1]]) return 1;
     return 2;
 }
-
-// Probably wont need this.
-void send_moves(Game* game);

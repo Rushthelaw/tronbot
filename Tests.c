@@ -17,15 +17,15 @@ int main(void) {
     print_grid(game->grid, game->gridx, game->gridy, game->pos);
     print_grid(game->p1->grid, game->p1->gridx, game->p1->gridy, game->p1->pos);
     // Testing getvalidmoves
-    num = get_validmoves(game->grid, game->gridx, game->gridy, game->pos, 0, &moves);
-    for (int i = 0; i<num; i++) {
-        printf("M%d : %d\n", i, moves[i]);
-    }
+    //num = get_validmoves(game->grid, game->gridx, game->gridy, game->pos, 0, &moves);
+    //for (int i = 0; i<num; i++) {
+    //    printf("M%d : %d\n", i, moves[i]);
+    //}
     //free(moves);
-    num = get_validmoves(game->grid, game->gridx, game->gridy, game->pos, 1, &moves);
-    for (int i = 0; i<num; i++) {
-        printf("M%d : %d\n", i, moves[i]);
-    }
+    //num = get_validmoves(game->grid, game->gridx, game->gridy, game->pos, 1, &moves);
+    //for (int i = 0; i<num; i++) {
+    //    printf("M%d : %d\n", i, moves[i]);
+    //}
     //free(moves);
 
     // Testing expand_tree
@@ -209,7 +209,7 @@ int main(void) {
     }
 
     destroy_game(game);
-    for (int i = 0; i<10000; i++) {
+    for (int i = 0; i<100; i++) {
         p1[0] = p1[1] = 7;
         p2[0] = p2[1] = 2;
         game = init_game(10, 10, NULL, p1, p2);
@@ -217,8 +217,26 @@ int main(void) {
         //print_grid(game->grid, game->gridx, game->gridy, game->pos);
         play_game(game);
         destroy_game(game);
-        printf("i : %d\n", i);
     }
+    int num_games = 1;
+    int random = 0;
+    int voronoi = 0;
+    int count = 0;
+    for (int i = 0; i<num_games; i++) {
+        p1[0] = p1[1] = 7;
+        p2[0] = p2[1] = 2;
+        game = init_game(10, 10, NULL, p1, p2);
+        add_players(game, 3, 1, randommove, voronoi_dist);
+        //print_grid(game->grid, game->gridx, game->gridy, game->pos);
+        play_game(game);
+        if (game->is_over) count++;
+        if (game->p1lost && !game->p2lost) voronoi++;
+        if (game->p2lost && !game->p1lost) random++;
+        destroy_game(game);
+    }
+    printf("Nombre de parties : %d %d\n", num_games, count);
+    printf("Nombre de victoires aleatoires et pourcentage de victoires : %d %f\n", random, (float)random/num_games);
+    printf("Nombre de victoires voronoi et pourcentage de victoires :    %d %f\n", voronoi, (float)voronoi/num_games);
     printf("Ended correctly\n");
 }
 
