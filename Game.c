@@ -110,20 +110,23 @@ void destroy_game(Game* game) {
 // This plays game until the end
 // This needs to be redone because i will change Player API to consider the time
 // limit
-void play_game(Game* game){
+void play_game(Game* game, int (*compute_p1)(Player*, int, int),
+        int (*compute_p2)(Player*, int, int)){
     Player* p1 = game->p1;
     Player* p2 = game->p2;
     int last1, last2, temp;
+    last1 = last2 = -1;
 
     Tree* tree = game->p1->tree;
     while (!(game->is_over)) {
         //printf("Choosing moves\n");
-        temp = compute_next(p1, last1, last2);
-        last2 = compute_next(p2, last2, last1);
+        temp = compute_p1(p1, last1, last2);
+        last2 = compute_p2(p2, last2, last1);
         last1 = temp;
         //printf("Moves choosen\n");
         make_moves(game, last1, last2);
-        //print_grid(game->grid, game->gridx, game->gridy, game->pos);
+        print_grid(game->grid, game->gridx, game->gridy, game->pos);
+        
         //sleep(1);
     }
     //printf("Game Over!\n");
@@ -185,19 +188,19 @@ void make_moves(Game* game, int m1, int m2) {
                 game->gridx, game->gridy, game->pos, 0, m1)) {
         game->is_over = 1;
         game->p1lost = 1;
-    } else if (game->grid[game->pos[0][0]][game->pos[0][1]] == 1) {
-        game->is_over = 1;
-        game->p1lost = 1;
     }
     if(m2>3 || m2<0 || make_move(game->grid,
                 game->gridx, game->gridy, game->pos, 1, m2)) {
         game->is_over = 1;
         game->p2lost = 1;
-        return;
-    } else if (game->grid[game->pos[1][0]][game->pos[1][1]] == 1) {
+    } 
+    if (game->grid[game->pos[0][0]][game->pos[0][1]] == 1) {
+        game->is_over = 1;
+        game->p1lost = 1;
+    }
+    if (game->grid[game->pos[1][0]][game->pos[1][1]] == 1) {
         game->is_over = 1;
         game->p2lost = 1;
-        return;
     }
     if ((game->pos[0][0] == game->pos[1][0]) 
             && (game->pos[0][1] == game->pos[1][1])) {
@@ -229,12 +232,6 @@ int make_move(int** grid, int gridx, int gridy, int** pos, int id, int move) {
     }
     return 0;
 }
-
-/* These two functions should be merged into 1
- * Dependant functions :
- * - new_node
- * - randommove
- * */
 
 // Checks if game specified by the parameters is over
 int game_over(int** grid, int gridx, int gridy, int** pos) {
