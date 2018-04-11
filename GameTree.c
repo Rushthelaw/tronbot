@@ -26,6 +26,8 @@ Node* new_node(Node* parent, Player* player, int** grid, int gridx, int gridy,
     node->children = NULL;
     node->last1 = last1;
     node->last2 = last2;
+    if (parent) node->depth = parent->depth+1;
+    else node->depth = 1;
     node->value = -INFINITY;
 
     return node;
@@ -83,6 +85,7 @@ int spawn_children(Node* parent, int id) {
     if (!parent) return 0;
     // we won't spawn children of a game that is over
     if (parent->terminal) return 0;
+    if (parent->n_child) return -2;
 
     parent->n_child = 3;
     int** new_grid;

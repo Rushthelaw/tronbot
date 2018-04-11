@@ -1,12 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 #include "Game.h"
 #include "Player.h"
 #include "GameTree.h"
+#include "lfsr113.h"
 
 // This function assumes grid and pos are taken from a player that's just been
-// initialized. Therefore, we assume it will all work.
+// initialized. Therefore, we assume it will all work (no validity checks are made)
 Player* init_player(int** grid, int gridx, int gridy, int** pos, int id,
         int last1, int last2, double (*node_value)(Node*)) {
     Player* player = malloc(sizeof(Player));
@@ -154,6 +156,80 @@ int expand_tree(Player* player) {
         player->tree->last_level[i]->pointer = player->tree->last_level+i;
     }
     return total_num;
+}
+
+// Expands tree via Monte-Carlo. This will create children for num nodes
+// This really is to have interresting results...
+int expand_tree_MC(Player* player, int num) {
+    if (player->tree->num_nodes == 0) return 0;
+    int total_num = 0;
+    int num_elem, next_node, to_move;
+
+    Node*** last_level = malloc(num * sizeof(Node**));
+    if (!last_level) {
+        printf("Out of memory!\n");
+        return -1;
+    }
+
+    // Choosing nodes and spawning children
+    for (int i = 0; i<num; i++) {
+        next_node = (int) lfsr113()*player->tree->num_nodes;
+        if (next_node == player->tree->num_nodes) printf("TRUE\n");
+
+        // We might not expand the right number of nodes. If we don't, we at
+        // least update player->tree->last_level at the end
+        if (!player->tree->last_level[next_node]) {
+            last_level[i] = NULL;
+            continue;
+        }
+
+        to_move = (player->tree->last_level[next_node]->depth + player->id+1)%2;
+        num_elem = spawn_children(player->tree->last_level[next_node], to_move);
+        
+        player->tree->last_level[next_node]->pointer = NULL;
+        if (num_elem <= 0) {
+            last_level[i] = NULL;
+            player->tree->last_level[next_node] = NULL;
+            continue;
+        }
+
+        last_level[i] = player->tree->last_level[next_node]->children;
+        total_num += num_elem;
+
+        player->tree->last_level[next_node] = NULL;
+    }
+    num_elem = 0;
+    for (int i = 0; i<player->tree->num_nodes; i++) {
+        if (player->tree->last_level[i]) {
+            player->tree->last_level[num_elem] = player->tree->last_level[i];
+            num_elem++;
+        }
+    }
+    Node** tmp = malloc((num_elem+total_num) * sizeof(Node*));
+    if (!tmp) {
+        printf("Out of memory!\n");
+        free(last_level);
+        return -1;
+    }
+    memcpy(tmp, player->tree->last_level, num_elem * sizeof(Node*));
+
+    next_node = 0;
+    for (int i = 0; i<num; i++) {
+        if(!last_level[i]) continue;
+        for (int j = 0; j<3; j++) {
+            tmp[num_elem+next_node] = last_level[i][j];
+            next_node++;
+        }
+    }
+    free(last_level);
+    free(player->tree->last_level);
+    player->tree->last_level = tmp;
+
+    player->tree->num_nodes = total_num+num_elem;
+    for (int i = 0; i<player->tree->num_nodes; i++) {
+        player->tree->last_level[i]->pointer = player->tree->last_level+i;
+    }
+    return 1;
 }
 
 // Cuts useless branches of tree and updates root.
@@ -305,7 +381,7 @@ int compute_next(Player* player, int last_self, int last_op) {
         evaluate_node(player->tree->root, player, 0);
         clock_gettime(CLOCK_REALTIME, &current);
     }
-    printf("Time taken : %f\n", elapsed_time(&start, &current)/1000000000.0);
+    //printf("Time taken : %f\n", elapsed_time(&start, &current)/1000000000.0);
     return choose_next(player);
 }
 
@@ -334,10 +410,85 @@ int compute_ab(Player* player, int last_self, int last_op) {
         evaluate_ab(player->tree->root, player, 0, 1);
         clock_gettime(CLOCK_REALTIME, &current);
     }
-    printf("Time taken : %f\n", elapsed_time(&start, &current)/1000000000.0);
+    //printf("Time taken : %f\n", elapsed_time(&start, &current)/1000000000.0);
     return choose_next(player);
 }
 
+// This is the time control for MCT
+int compute_MC(Player* player, int last_self, int last_op) {
+    struct timespec start, current;
+    clock_gettime(CLOCK_REALTIME, &start);
+    if (last_self >= 0) {
+        update_tree(player, last_self, player->id);
+        update_tree(player, last_op, (player->id+1)&1);
+        if(player->id) {
+            player->last1 = last_op;
+            player->last2 = last_self;
+        } else {
+            player->last1 = last_self;
+            player->last2 = last_op;
+        }
+    }
+    
+    Node** nodes = malloc(3*sizeof(Node*));
+    nodes[0] = player->tree->root;
+    nodes[1] = NULL;
+    nodes[2] = NULL;
+    int num[3] = {0};
+    // Expanding tree to the proper depth
+    int total = 0;
+    for (int i = 0; i<2; i++) {
+        for (int j = 0; j<3; j++) {
+            if (nodes[j]) num[j] = spawn_children(nodes[j], (i+player->id)%2);
+            if (num[j] > 0 && i > 0) {
+                total += num[j];
+            }
+        }
+        if (i==0 && nodes[0]->children) {
+            for (int j = 0; j<3; j++) {
+                nodes[2-j] = nodes[0]->children[j];
+            }
+        }
+    }
+    printf("total %d\n", total);
+    Node** tmp = malloc((player->tree->num_nodes + total) * sizeof(Node*));
+    if (!tmp) {
+        free(nodes);
+        printf("Out of memory\n");
+        return -1;
+    }
+    total = 0;
+    memcpy(tmp, player->tree->last_level, player->tree->num_nodes*sizeof(Node*));
+    for (int i = 0; i<3; i++) {
+        if (num[i] > 0) {
+            for (int j = 0; j<num[i]; j++) {
+                tmp[player->tree->num_nodes + total] = nodes[i]->children[j];
+                total++;
+            }
+        }
+    }
+    printf("total %d\n", total);
+    player->tree->num_nodes += total;
+
+    free(nodes);
+    free(player->tree->last_level);
+    player->tree->last_level = tmp;
+    for (int k = 0; k<player->tree->num_nodes; k++) {
+        if(player->tree->last_level[k])
+        player->tree->last_level[k]->pointer = player->tree->last_level + k;
+    }
+
+    evaluate_ab(player->tree->root, player, 0, 1);
+    clock_gettime(CLOCK_REALTIME, &current);
+    int has_nodes = 1;
+    while(elapsed_time(&start, &current)<TTPLAY && has_nodes) {
+        has_nodes = expand_tree_MC(player, 5);
+        evaluate_ab(player->tree->root, player, 0, 1);
+        clock_gettime(CLOCK_REALTIME, &current);
+    }
+    //printf("Time taken : %f\n", elapsed_time(&start, &current)/1000000000.0);
+    return choose_next(player);
+}
 // This is an exact solver of the game
 // This will timeout if it takes more than 30 minutes to expand the tree
 int compute_exact(Player* player, int last_self, int last_op) {
@@ -419,11 +570,10 @@ double combo_score(Node* node) {
     return score;
 }
 
-/* The next 3 functions basically do the same thing with different objectives
+/* The next 2 functions basically do the same thing with different objectives
  * in mind. They all use Dijkstra (sort of) to compute the distance between some
  * stuff. This is super redundant so feel free to only read the description.
  * */
-
 // Returns the controller of the space (i,j) in grid (closest player)
 // 1.0 is p1, -1.0 is p2, 0.0 means both are or the space is inacessible.
 double controller(int i, int j, int** grid, int gridx, int gridy, int** pos) {

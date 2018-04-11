@@ -44,6 +44,8 @@ void destroy_player(Player* player);
 
 int expand_tree(Player* player);
 
+int expand_tree_MC(Player* player, int num);
+
 void update_tree(Player* player, int move, int id);
 
 void evaluate_node(Node* node, Player* player, int minmax);
@@ -55,6 +57,8 @@ int choose_next(Player* player);
 int compute_next(Player* player, int last_self, int last_op);
 
 int compute_ab(Player* player, int last_self, int last_op);
+
+int compute_MC(Player* player, int last_self, int last_op);
 
 int compute_exact(Player* player, int last_self, int last_op);
 

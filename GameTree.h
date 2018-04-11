@@ -16,7 +16,7 @@ struct Node {
     Player* player;
     int** grid;
     int** pos;
-    int gridx, gridy, terminal, n_child, last1, last2;
+    int gridx, gridy, terminal, n_child, last1, last2, depth;
     double value;
     struct Node** pointer;
     struct Node** children;

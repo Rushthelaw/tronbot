@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -I .
-HEADERS = Game.h Player.h GameTree.h
-DEPS = Game.c Player.c GameTree.c
+HEADERS = Game.h Player.h GameTree.h lfsr113.h
+DEPS = Game.c Player.c GameTree.c lfsr113.c
 OUTPUT = Game
 
 all: $(DEPS) $(HEADERS)

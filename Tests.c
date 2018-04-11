@@ -260,6 +260,7 @@ int main(void) {
     printf("Time ab :     %f\n", (float)timeab/1E9);
     printf("Difference : %f\n", (float)(timeminmax - timeab)/1E9);
     */
+    /*
     for (int i = 0; i<num_games; i++) {
         p1[0] = p1[1] = 7;
         p2[0] = p2[1] = 2;
@@ -273,6 +274,7 @@ int main(void) {
     }
     printf("Wins p1 : %d\n", voronoi1);
     printf("Wins p2 : %d\n", voronoi2);
+    voronoi1 = voronoi2 = 0;
     for (int i = 0; i<num_games; i++) {
         p1[0] = 4;
         p1[1] = 4;
@@ -281,6 +283,22 @@ int main(void) {
         add_players(game, 3, 1, voronoi_dist, combo_score);
         //print_grid(game->grid, game->gridx, game->gridy, game->pos);
         play_game(game, compute_next, compute_ab);
+        if (game->p1lost && !game->p2lost) voronoi2++;
+        if (game->p2lost && !game->p1lost) voronoi1++;
+        destroy_game(game);
+    }
+    printf("Wins p1 : %d\n", voronoi1);
+    printf("Wins p2 : %d\n", voronoi2);
+    */
+    voronoi1 = voronoi2 = 0;
+    for (int i = 0; i<num_games; i++) {
+        p1[0] = 7;
+        p1[1] = 7;
+        p2[0] = p2[1] = 2;
+        game = init_game(10, 10, NULL, p1, p2);
+        add_players(game, 3, 1, combo_score, combo_score);
+        //print_grid(game->grid, game->gridx, game->gridy, game->pos);
+        play_game(game, compute_MC, compute_ab);
         if (game->p1lost && !game->p2lost) voronoi2++;
         if (game->p2lost && !game->p1lost) voronoi1++;
         destroy_game(game);
