@@ -40,58 +40,6 @@ void destroy_player(Player* player) {
     free(player);
 }
 
-/* This is useless
-// Sets valid_moves to an array containing valid moves for player id
-// Does not directly use player as argument because it will be needed elsewhere
-// Have to check valid_moves after using this, it might be set to NULL
-int get_validmoves(int** grid, int gridx, int gridy, int** pos,
-        int id, int** valid_moves) {
-    int moves[4] = {0};
-    int num = 0;
-    if (pos[id][0]-1 >= 0 && !grid[pos[id][0]-1][pos[id][1]]
-            && !(pos[id][0]-1 == pos[(id+1)&1][0] && pos[id][1] == pos[(id+1)&1][1])) {
-        num++;
-        moves[0] = 1;
-    }
-    if (pos[id][1]+1 < gridy && !grid[pos[id][0]][pos[id][1]+1]
-            && !(pos[id][0] == pos[(id+1)&1][0] && pos[id][1]+1 == pos[(id+1)&1][1])) {
-        num++;
-        moves[1]=1;
-    }
-    if (pos[id][0]+1 < gridx && !grid[pos[id][0]+1][pos[id][1]]
-            && !(pos[id][0]+1 == pos[(id+1)&1][0] && pos[id][1] == pos[(id+1)&1][1])) {
-        num++;
-        moves[2]=1;
-    }
-    if (pos[id][1]-1 >= 0 && !grid[pos[id][0]][pos[id][1]-1]
-            && !(pos[id][0] == pos[(id+1)&1][0] && pos[id][1]-1 == pos[(id+1)&1][1])) {
-        num++;
-        moves[3]=1;
-    }
-    if(!num) {
-        *valid_moves = NULL;
-        printf("There are no valid moves\n");
-        return 0;
-    }
-    //int availmoves[num];
-    *valid_moves = malloc(num*sizeof(int));
-    if(!*valid_moves) {
-        printf("Out of memory.\n");
-        return 0;
-    }
-    int count = 0;
-    for (int i = 0; i<4; i++) {
-        if (moves[i]) {
-            //availmoves[count] = i;
-            (*valid_moves)[count] = i;
-            count++;
-        }
-    }
-    /valid_moves = availmoves;
-    return num;
-}
-*/
-
 // Develops the next level of the game tree of player.
 int expand_tree(Player* player) {
     // We evaluate which player plays on next level of tree
@@ -376,7 +324,7 @@ int compute_next(Player* player, int last_self, int last_op) {
     }
     evaluate_node(player->tree->root, player, 0);
     clock_gettime(CLOCK_REALTIME, &current);
-    while(elapsed_time(&start, &current)<TTPLAY && player->tree->depth<7) {
+    while(elapsed_time(&start, &current)<500000000) {
         expand_tree(player);
         evaluate_node(player->tree->root, player, 0);
         clock_gettime(CLOCK_REALTIME, &current);
@@ -405,7 +353,7 @@ int compute_ab(Player* player, int last_self, int last_op) {
     }
     evaluate_ab(player->tree->root, player, 0, 1);
     clock_gettime(CLOCK_REALTIME, &current);
-    while(elapsed_time(&start, &current)<TTPLAY && player->tree->depth<7) {
+    while(elapsed_time(&start, &current)<500000000) {
         expand_tree(player);
         evaluate_ab(player->tree->root, player, 0, 1);
         clock_gettime(CLOCK_REALTIME, &current);
@@ -450,7 +398,6 @@ int compute_MC(Player* player, int last_self, int last_op) {
             }
         }
     }
-    printf("total %d\n", total);
     Node** tmp = malloc((player->tree->num_nodes + total) * sizeof(Node*));
     if (!tmp) {
         free(nodes);
@@ -467,7 +414,6 @@ int compute_MC(Player* player, int last_self, int last_op) {
             }
         }
     }
-    printf("total %d\n", total);
     player->tree->num_nodes += total;
 
     free(nodes);
@@ -607,7 +553,13 @@ double controller(int i, int j, int** grid, int gridx, int gridy, int** pos) {
     list1[0] = position;
     last_length = 1;
     while (!p1 && !p2) {
-        list2 = malloc(gridx * gridy *sizeof(int*));
+        list2 = malloc(4 * last_length * sizeof(int*));
+        if (!list2) {
+            for (int i = 0; i<last_length; i++) free(list1[i]);
+            free(list1);
+            printf("Out of memory\n");
+            return 0.0;
+        }
         for (int k = 0; k<last_length; k++) {
             if (grid[list1[k][0]][list1[k][1]]) {
                 free(list1[k]);
@@ -643,8 +595,7 @@ double controller(int i, int j, int** grid, int gridx, int gridy, int** pos) {
                             list2[list_length] = position;
                             list_length++;
                         }
-                    }
-                    else if (l == 1) {
+                    } else if (l == 1) {
                         if (list1[k][1] + 1 < gridy) {
                             position = malloc(2*sizeof(int));
                             if (!position) {
@@ -662,8 +613,7 @@ double controller(int i, int j, int** grid, int gridx, int gridy, int** pos) {
                             list2[list_length] = position;
                             list_length++;
                         }
-                    }
-                    else if (l == 2) {
+                    } else if (l == 2) {
                         if (list1[k][0] + 1 < gridx) {
                             position = malloc(2*sizeof(int));
                             if (!position) {
@@ -681,8 +631,7 @@ double controller(int i, int j, int** grid, int gridx, int gridy, int** pos) {
                             list2[list_length] = position;
                             list_length++;
                         }
-                    }
-                    else if (l == 3) {
+                    } else if (l == 3) {
                         if (list1[k][1] - 1 >= 0) {
                             position = malloc(2*sizeof(int));
                             if (!position) {

@@ -23,8 +23,8 @@ Game* init_game(int gridx, int gridy, int** grid, int* p1, int* p2);
 
 void destroy_game(Game* game);
 
-void play_game(Game* game, int (*compute_p1)(Player*, int, int),
-        int (*compute_p2)(Player*, int, int));
+int play_game(Game* game, int (*compute_p1)(Player*, int, int),
+        int (*compute_p2)(Player*, int, int), double** times);
 
 void print_grid(int** grid, int gridx, int gridy, int** pos);
 

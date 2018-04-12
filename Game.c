@@ -37,26 +37,32 @@ Game* init_game(int gridx, int gridy, int** grid, int p1[2], int p2[2]) {
     game->p1lost = 0;
     game->p2lost = 0;
 
-    if(grid) {
-        game->grid = grid;
-    } else {
-        game->grid = malloc(gridx * sizeof(int*));
-        if(!(game->grid)) {
+    game->grid = malloc(gridx * sizeof(int*));
+    if(!(game->grid)) {
+        free(game);
+        printf("Out of memory.\n");
+        return NULL;
+    }
+    for (int i = 0; i<gridx; i++) {
+        game->grid[i] = malloc(gridy * sizeof(int));
+        if(!(game->grid[i])) {
+            for (int j = 0; j<i; j++) {
+                free(game->grid[j]);
+            }
+            free(game->grid);
             free(game);
             printf("Out of memory.\n");
             return NULL;
         }
+    }
+    if(grid) {
         for (int i = 0; i<gridx; i++) {
-            game->grid[i] = malloc(gridy * sizeof(int));
-            if(!(game->grid[i])) {
-                for (int j = 0; j<i; j++) {
-                    free(game->grid[j]);
-                }
-                free(game->grid);
-                free(game);
-                printf("Out of memory.\n");
-                return NULL;
+            for (int j = 0; j<gridy; j++) {
+                game->grid[i][j] = grid[i][j];
             }
+        }
+    } else {
+        for (int i = 0; i<gridx; i++) {
             for (int j = 0; j<gridy; j++) {
                 game->grid[i][j] = 0;
             }
@@ -110,26 +116,30 @@ void destroy_game(Game* game) {
 // This plays game until the end
 // This needs to be redone because i will change Player API to consider the time
 // limit
-void play_game(Game* game, int (*compute_p1)(Player*, int, int),
-        int (*compute_p2)(Player*, int, int)){
+int play_game(Game* game, int (*compute_p1)(Player*, int, int),
+        int (*compute_p2)(Player*, int, int), double** times){
     Player* p1 = game->p1;
     Player* p2 = game->p2;
-    int last1, last2, temp;
+    int last1, last2, temp, num_moves = 0;
+    struct timespec start, current;
     last1 = last2 = -1;
 
     Tree* tree = game->p1->tree;
     while (!(game->is_over)) {
-        //printf("Choosing moves\n");
+        clock_gettime(CLOCK_REALTIME, &start);
         temp = compute_p1(p1, last1, last2);
+        clock_gettime(CLOCK_REALTIME, &current);
+        times[0][num_moves] = elapsed_time(&start, &current) /1000000000.0;
+        clock_gettime(CLOCK_REALTIME, &start);
         last2 = compute_p2(p2, last2, last1);
+        clock_gettime(CLOCK_REALTIME, &current);
+        times[1][num_moves] = elapsed_time(&start, &current) /1000000000.0;
         last1 = temp;
-        //printf("Moves choosen\n");
         make_moves(game, last1, last2);
-        print_grid(game->grid, game->gridx, game->gridy, game->pos);
-        
-        //sleep(1);
+        //print_grid(game->grid, game->gridx, game->gridy, game->pos);
+        num_moves++;
     }
-    //printf("Game Over!\n");
+    return num_moves;
 }
 
 // Prints the grid.
@@ -194,11 +204,11 @@ void make_moves(Game* game, int m1, int m2) {
         game->is_over = 1;
         game->p2lost = 1;
     } 
-    if (game->grid[game->pos[0][0]][game->pos[0][1]] == 1) {
+    if (!game->p1lost && game->grid[game->pos[0][0]][game->pos[0][1]] == 1) {
         game->is_over = 1;
         game->p1lost = 1;
     }
-    if (game->grid[game->pos[1][0]][game->pos[1][1]] == 1) {
+    if (!game->p2lost && game->grid[game->pos[1][0]][game->pos[1][1]] == 1) {
         game->is_over = 1;
         game->p2lost = 1;
     }
