@@ -1,12 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include "Player.h"
 #include "Game.h"
 #include "GameTree.h"
 
 // I won't perform non-critical tests here because they will use precious time
-Node* new_node(Node* parent, int** grid, int gridx, int gridy, int** pos,
-        int last1, int last2) {
+Node* new_node(Node* parent, Player* player, int** grid, int gridx, int gridy,
+        int** pos, int last1, int last2) {
     Node* node = malloc(sizeof(Node));
     if(!node) {
         printf("Out of memory or something like that.\n");
@@ -14,6 +15,7 @@ Node* new_node(Node* parent, int** grid, int gridx, int gridy, int** pos,
     }
 
     node->parent = parent;
+    node->player = player;
     node->grid = grid;
     node->pos = pos;
     node->gridx = gridx;
@@ -24,7 +26,9 @@ Node* new_node(Node* parent, int** grid, int gridx, int gridy, int** pos,
     node->children = NULL;
     node->last1 = last1;
     node->last2 = last2;
-    node->value = -100.0;
+    if (parent) node->depth = parent->depth+1;
+    else node->depth = 1;
+    node->value = -INFINITY;
 
     return node;
 }
@@ -57,8 +61,9 @@ int** copy_grid(int** grid, int gridx, int gridy) {
 // Right now, those just return min and max value, but i might need to add some
 // stuff to allow me to find the next node without having to look for it
 double min(Node** nodes, int n_nodes) {
-    double min = nodes[0]->value;
-    for (int i = 1; i<n_nodes; i++) {
+    double min = INFINITY;
+    for (int i = 0; i<n_nodes; i++) {
+        if (!nodes[i]) continue;
         if (nodes[i]->value < min) min = nodes[i]->value;
     }
     return min;
@@ -66,8 +71,9 @@ double min(Node** nodes, int n_nodes) {
 
 // This assumes nodes have been evaluated
 double max(Node** nodes, int n_nodes) {
-    double max = nodes[0]->value;
-    for (int i = 1; i<n_nodes; i++) {
+    double max = -INFINITY;
+    for (int i = 0; i<n_nodes; i++) {
+        if (!nodes[i]) continue;
         if (nodes[i]->value > max) max = nodes[i]->value;
     }
     return max;
@@ -79,6 +85,7 @@ int spawn_children(Node* parent, int id) {
     if (!parent) return 0;
     // we won't spawn children of a game that is over
     if (parent->terminal) return 0;
+    if (parent->n_child) return -2;
 
     parent->n_child = 3;
     int** new_grid;
@@ -97,8 +104,8 @@ int spawn_children(Node* parent, int id) {
             new_grid = copy_grid(parent->grid, parent->gridx, parent->gridy);
             new_pos = copy_grid(parent->pos, 2, 2);
             make_move(new_grid, parent->gridx, parent->gridy, new_pos, id, i);
-            parent->children[count] = new_node(parent, new_grid, parent->gridx,
-                    parent->gridy, new_pos, parent->last1, i);
+            parent->children[count] = new_node(parent, parent->player, new_grid,
+                    parent->gridx, parent->gridy, new_pos, parent->last1, i);
             count++;
         }
     } else {
@@ -107,8 +114,8 @@ int spawn_children(Node* parent, int id) {
             new_grid = copy_grid(parent->grid, parent->gridx, parent->gridy);
             new_pos = copy_grid(parent->pos, 2, 2);
             make_move(new_grid, parent->gridx, parent->gridy, new_pos, id, i);
-            parent->children[count] = new_node(parent, new_grid, parent->gridx,
-                    parent->gridy, new_pos, i, parent->last2);
+            parent->children[count] = new_node(parent, parent->player, new_grid,
+                    parent->gridx, parent->gridy, new_pos, i, parent->last2);
             count++;
         }
     }

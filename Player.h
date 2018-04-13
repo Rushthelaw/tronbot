@@ -3,7 +3,6 @@
 #ifndef PLAYER_H_INCLUDED
 #define PLAYER_H_INCLUDED
 #include <time.h>
-#include "GameTree.h"
 
 // Total time allowed for a move in nanoseconds
 // To be thinkered with
@@ -16,6 +15,8 @@
  *                -update tree (cut parts of tree after a move is done)
  * */
 
+typedef struct Node Node;
+typedef struct Tree Tree;
 /* lost indicates that the player has lost
  * grid is a 2d array representing the game grid
  * gridx and gridy are the grid dimensions. Needed to compute possible moves
@@ -41,21 +42,37 @@ void destroy_player(Player* player);
 //int get_validmoves(int** grid, int gridx, int gridy, int** pos,
 //        int id, int** valid_moves);
 
-void expand_tree(Player* player);
+int expand_tree(Player* player);
+
+int expand_tree_MC(Player* player, int num);
 
 void update_tree(Player* player, int move, int id);
 
 void evaluate_node(Node* node, Player* player, int minmax);
 
+void evaluate_ab(Node* node, Player* player, int minmax, int depth);
+
 int choose_next(Player* player);
 
 int compute_next(Player* player, int last_self, int last_op);
+
+int compute_ab(Player* player, int last_self, int last_op);
+
+int compute_MC(Player* player, int last_self, int last_op);
+
+int compute_exact(Player* player, int last_self, int last_op);
 
 double randommove(Node* node);
 
 double voronoi_dist(Node* node);
 
+double combo_score(Node* node);
+
 double controller(int i, int j, int** grid, int gridx, int gridy, int** pos);
+
+double p_distance(int** grid, int gridx, int gridy, int** pos);
+
+double w_distance(int** grid, int gridx, int gridy, Player* player);
 
 long elapsed_time(const struct timespec* start, const struct timespec* current);
 

@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -I .
-HEADERS = Game.h Player.h GameTree.h
-DEPS = Game.c Player.c GameTree.c
+HEADERS = Game.h Player.h GameTree.h lfsr113.h
+DEPS = Game.c Player.c GameTree.c lfsr113.c
 OUTPUT = Game
 
 all: $(DEPS) $(HEADERS)
@@ -10,6 +10,10 @@ all: $(DEPS) $(HEADERS)
 exec: $(DEPS) $(HEADERS)
 	$(CC) $(FLAGS) main.c $(DEPS) -o $(OUTPUT)
 	./$(OUTPUT)
+
+testmain: $(DEPS) $(HEADERS)
+	$(CC) $(FLAGS) -g main.c $(DEPS) -o $(OUTPUT)
+	valgrind --log-file=valgrind.txt ./Game
 
 tests: $(DEPS) $(HEADERS) Tests.c
 	$(CC) $(FLAGS) Tests.c $(DEPS) -o Tests

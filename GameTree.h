@@ -2,6 +2,7 @@
 //Will enventually also contain traversal function declaration
 #ifndef TREE_H_INCLUDED
 #define TREE_H_INCLUDED
+#include "Player.h"
 
 /* Node structure
  * We want node to contain a game configuration
@@ -10,18 +11,19 @@
  * last1 is the last move of p1, last2 is the last move of p2
  * */
 // pointer is a workaround. It points to the pointer referencing this in last_level
-typedef struct Node {
+struct Node {
     struct Node* parent;
+    Player* player;
     int** grid;
     int** pos;
-    int gridx, gridy, terminal, n_child, last1, last2;
+    int gridx, gridy, terminal, n_child, last1, last2, depth;
     double value;
     struct Node** pointer;
     struct Node** children;
-} Node;
+};
 
-Node* new_node(Node* parent, int** grid, int gridx, int gridy, int** pos,
-        int last1, int last2);
+Node* new_node(Node* parent, Player* player, int** grid, int gridx, int gridy,
+        int** pos, int last1, int last2);
 
 int** copy_grid(int** grid, int gridx, int gridy);
 
@@ -39,12 +41,12 @@ void free_node(Node* node);
  * depth is the number of levels in the tree (note that it can be used to know
  * which player turn it is on the next level)
  * */
-typedef struct {
+struct Tree {
     Node* root;
     Node** last_level;
     int num_nodes;
     int depth;
-} Tree;
+};
 
 Tree* new_tree(Node* root);
 
