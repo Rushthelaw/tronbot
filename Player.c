@@ -260,7 +260,7 @@ void evaluate_ab(Node* node, Player* player, int minmax, int depth) {
         // We prune after evaluation, this way we don't have to keep a beta
         // (best possible score in current position for player) because it is
         // node->value.
-        if (depth%2) {
+        if (depth%6 == 1) {
             for (int i = 0; i<node->n_child; i++) {
                 if (!node->children[i]) continue;
                 if (node->children[i]->value > node->value) {
@@ -324,7 +324,8 @@ int compute_next(Player* player, int last_self, int last_op) {
     }
     evaluate_node(player->tree->root, player, 0);
     clock_gettime(CLOCK_REALTIME, &current);
-    while(elapsed_time(&start, &current)<500000000) {
+    // The second condition is because of memory limitations on my PC
+    while(elapsed_time(&start, &current)<500000000 && player->tree->num_nodes<3000000) {
         expand_tree(player);
         evaluate_node(player->tree->root, player, 0);
         clock_gettime(CLOCK_REALTIME, &current);
@@ -353,7 +354,8 @@ int compute_ab(Player* player, int last_self, int last_op) {
     }
     evaluate_ab(player->tree->root, player, 0, 1);
     clock_gettime(CLOCK_REALTIME, &current);
-    while(elapsed_time(&start, &current)<500000000) {
+    // The second condition is because of memory limitations on my PC
+    while(elapsed_time(&start, &current)<500000000 && player->tree->num_nodes<3000000) {
         expand_tree(player);
         evaluate_ab(player->tree->root, player, 0, 1);
         clock_gettime(CLOCK_REALTIME, &current);
