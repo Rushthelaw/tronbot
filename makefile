@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -I .
 HEADERS = Game.h Player.h GameTree.h lfsr113.h
 DEPS = Game.c Player.c GameTree.c lfsr113.c
-OUTPUT = Game
+OUTPUT = build/Game
 
 all: $(DEPS) $(HEADERS)
 	$(CC) $(FLAGS) main.c $(DEPS) -o $(OUTPUT)
@@ -16,8 +16,8 @@ testmain: $(DEPS) $(HEADERS)
 	valgrind --log-file=valgrind.txt ./Game
 
 tests: $(DEPS) $(HEADERS) Tests.c
-	$(CC) $(FLAGS) Tests.c $(DEPS) -o Tests
+	$(CC) $(FLAGS) Tests.c $(DEPS) -o build/Tests
 
 maketests: $(DEPS) $(HEADERS) Tests.c
-	$(CC) $(FLAGS) -g Tests.c $(DEPS) -o Tests
-	valgrind --log-file=valgrind.txt ./Tests
+	$(CC) $(FLAGS) -g Tests.c $(DEPS) -o build/Tests
+	valgrind --log-file=valgrind.txt build/Tests
