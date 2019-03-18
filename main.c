@@ -234,8 +234,8 @@ int main(void) {
     play_games(num_games, x, y, randommove, combo_score, compute_MC, compute_MC);
 
     printf("\nContre Voronoi\n");
-    //printf("\nVoronoi next vs combo next\n");
-    //play_games(num_games, x, y, voronoi_dist, combo_score, compute_next, compute_next);
+    printf("\nVoronoi next vs combo next\n");
+    play_games(num_games, x, y, voronoi_dist, combo_score, compute_next, compute_next);
     printf("\nVoronoi next vs combo ab\n");
     play_games(num_games, x, y, voronoi_dist, combo_score, compute_next, compute_ab);
     printf("\nVoronoi next vs Combo MC\n");

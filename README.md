@@ -1,13 +1,37 @@
-This is the game logic and a dynamic programming approach to solve the game TRON light cycle in C.
+# tronbot
 
-Pour lire le code source, un bon début est le fichier Game.c.
+_A bot that plays TRON: light cycle, and more._
 
-L'entièreté des tests peut être effectuée avec la commande make exec, mais le makefile fournit d'autres options pour compiler et exécuter le programme.
+## What this is
 
-Vous trouverez une exécution déjà complétée dans le fichier results.txt.
-Il est possible qu'une exécution future ne concorde pas tout à fait avec les résultats puisque j'ai changé la fonction d'élagage depuis le rapport.
-L'exécution du code a été faite sur la distribution Linux Solus, avec le compilateur gcc version 7.3.0, un processeur Intel i5-6500 et 16Go de mémoire vive.
-L'entièreté des simulations a pris un peu plus de 4 heures.
-Il se peut que certaines fonctions utilisées (surtout celles utilisées pour chronométrer) ne soient pas standard sur toutes les plateformes.
+This started out as an assignement for school to learn dynamic programming.
+Since I did not find any implementation of the game logic that suited me, I
+reimplemented it along with basic dynamic programming algorithms to solve the
+game. The limited time span I had to work on this project made it so
+that the final state of it was not very satisfying. I am now working on properly
+completing this project.
 
-Si je fais des modifications après le 13 avril, elles seront visible sur la page github du projet : https://github.com/Rushthelaw/tronbot.
+## Goals
+
+My goal is to learn stuff through fun projects like this one so my steps are
+based on what will teach me the most rather than on what will progress the project.
+The current order of things is :
+- Build a functionnal and proper server
+  - Flexible game mechanics
+  - Standalone from the player code for bot modularity
+  - Network play?
+  - Human play?
+- Build a few bots with different strategies with different levels of refinment
+  - Have a base bot 'class' in with only one function to implement to change its
+    behavior
+  - No current plans about which strategies will be implemented.
+
+### Old project notes
+- Maximiser le temps de calcul (faire en sorte de prendre près de une seconde
+  à chaque fois)
+- Choisir des grilles sur lesquelles faire des tests
+- Choisir les paramètres à tester
+
+Faire les enfants des noeuds déjà finis si le joueur les a évalués? Sinon, on
+ne remarque pas les positions qui forcent la nulle et on les considère
+seulement comme une défaite.

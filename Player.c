@@ -122,7 +122,6 @@ int expand_tree_MC(Player* player, int num) {
     // Choosing nodes and spawning children
     for (int i = 0; i<num; i++) {
         next_node = (int) lfsr113()*player->tree->num_nodes;
-        if (next_node == player->tree->num_nodes) printf("TRUE\n");
 
         // We might not expand the right number of nodes. If we don't, we at
         // least update player->tree->last_level at the end
@@ -224,7 +223,8 @@ void update_tree(Player* player, int move, int id) {
 // This has no alpha-beta
 void evaluate_node(Node* node, Player* player, int minmax) {
     if (node->n_child) {
-        for (int i = 0; i< node->n_child; i++) {
+        for (int i = 0; i<node->n_child; i++) {
+            if(node->children[i])
             evaluate_node(node->children[i], player, (minmax+1)&1);
         }
         if (minmax) node->value = max(node->children, node->n_child);
@@ -233,7 +233,7 @@ void evaluate_node(Node* node, Player* player, int minmax) {
     }
     // Because node_value is a loss function for p1
     if(isinf(node->value)) {
-        if (player->id) node->value = - player->node_value(node);
+        if (player->id) node->value = -player->node_value(node);
         else node->value = player->node_value(node);
     }
 }
@@ -430,8 +430,8 @@ int compute_MC(Player* player, int last_self, int last_op) {
     clock_gettime(CLOCK_REALTIME, &current);
     int has_nodes = 1;
     while(elapsed_time(&start, &current)<TTPLAY && has_nodes) {
-        has_nodes = expand_tree_MC(player, 5);
-        evaluate_ab(player->tree->root, player, 0, 1);
+        has_nodes = expand_tree_MC(player, 10);
+        evaluate_node(player->tree->root, player, 0);      
         clock_gettime(CLOCK_REALTIME, &current);
     }
     //printf("Time taken : %f\n", elapsed_time(&start, &current)/1000000000.0);
